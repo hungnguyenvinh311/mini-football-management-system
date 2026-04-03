@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Sân Bóng Mini - Thanh Toán</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f4f6f9; overflow-x: hidden; }
+        .sidebar { height: 100vh; background-color: #343a40; color: white; position: fixed; width: 250px; }
+        .sidebar a { color: #c2c7d0; text-decoration: none; padding: 15px 20px; display: block; transition: 0.3s; }
+        .sidebar a:hover, .sidebar a.active { background-color: #494e53; color: white; border-left: 4px solid #007bff; }
+        .main-content { margin-left: 250px; padding: 20px; }
+        
+        /* Ẩn các bước sau ban đầu */
+        #step-2-customer-list, #step-3-bookings, #step-4-invoice { display: none; }
+        
+        .cursor-pointer { cursor: pointer; }
+        .hover-bg-light:hover { background-color: #f8f9fa; }
+        .invoice-box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border-top: 5px solid #198754; }
+        .qty-input { width: 70px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <!-- <div class="sidebar">
+        <h4 class="text-center py-4 border-bottom border-secondary">MiniPitch Admin</h4>
+        <a href="booking.html"><i class="fas fa-calendar-check me-2"></i> Đặt sân (Booking)</a>
+        <a href="update_session.html"><i class="fas fa-hamburger me-2"></i> Cập nhật dịch vụ</a>
+        <a href="checkout.html" class="active"><i class="fas fa-file-invoice-dollar me-2"></i> Thanh toán</a>
+        <a href="import_goods.html"><i class="fas fa-boxes me-2"></i> Quản lý kho</a>
+        <a href="auth.html" class="mt-5 text-danger"><i class="fas fa-sign-out-alt me-2"></i> Đăng xuất</a>
+    </div> -->
+
+    <div class="sidebar d-print-none">
+        <h4 class="text-center py-4 border-bottom border-secondary">MiniPitch Admin</h4>
+        
+        <a href="dashboard.html" id="menu-dashboard"><i class="fas fa-tachometer-alt me-2"></i> Tổng quan (Dashboard)</a>
+        
+        <a href="booking.html"><i class="fas fa-calendar-check me-2"></i> Đặt sân (Booking)</a>
+        <a href="update_session.html"><i class="fas fa-hamburger me-2"></i> Cập nhật dịch vụ</a>
+        <a href="checkout.html"><i class="fas fa-file-invoice-dollar me-2"></i> Thanh toán</a>
+        <a href="import_goods.html"><i class="fas fa-boxes me-2"></i> Nhập kho</a>
+        
+        <a href="#" onclick="handleLogout()" class="mt-5 text-danger"><i class="fas fa-sign-out-alt me-2"></i> Đăng xuất</a>
+    </div>
+
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
+            <h4 class="m-0 text-success"><i class="fas fa-cash-register me-2"></i> Module: Thanh Toán (Checkout)</h4>
+            <!-- <div>
+                <span class="me-3"><i class="fas fa-user-circle"></i> Nhân viên: <strong>Nguyễn Văn A</strong></span>
+            </div> -->
+            <div id="currentUserDisplay">
+                </div>
+        </div>
+
+        <div class="card shadow-sm mb-4" id="step-1-search">
+            <div class="card-header bg-white fw-bold">1. Tìm phiếu đặt sân để thanh toán</div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label">Tên khách hàng hoặc Số điện thoại</label>
+                        <input type="text" class="form-control" id="searchCustomerInput" placeholder="Nhập thông tin khách hàng muốn thanh toán...">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-success w-100" onclick="searchCustomer()"><i class="fas fa-search"></i> Tìm kiếm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="step-2-3-wrapper">
+            <div class="col-md-4" id="step-2-customer-list">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white fw-bold">2. Chọn Khách hàng</div>
+                    <ul class="list-group list-group-flush" id="customerList">
+                        </ul>
+                </div>
+            </div>
+
+            <div class="col-md-8" id="step-3-bookings">
+                <div class="card shadow-sm mb-4 border-success">
+                    <div class="card-header bg-success text-white fw-bold">3. Phiếu đặt sân chờ thanh toán</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mã Booking</th>
+                                    <th>Sân</th>
+                                    <th>Kỳ hạn</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bookingList">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="step-4-invoice" class="mb-5">
+            <div class="invoice-box">
+                <div class="row mb-4 border-bottom pb-3">
+                    <div class="col-sm-6">
+                        <h3 class="text-success"><i class="fas fa-file-invoice"></i> HÓA ĐƠN THANH TOÁN</h3>
+                        <p class="mb-0 text-muted">Mã HĐ: <strong class="text-dark">#INV-2026-0314</strong></p>
+                        <p class="mb-0 text-muted">Ngày xuất: 14/03/2026</p>
+                    </div>
+                    <div class="col-sm-6 text-end">
+                        <h5 class="mb-1">Khách hàng: <span class="text-primary">Trần Lực</span></h5>
+                        <p class="mb-0 text-muted">SĐT: 0912 345 678</p>
+                        <p class="mb-0 text-muted">Nhân viên thu ngân: Nguyễn Văn A</p>
+                    </div>
+                </div>
+
+                <form id="checkoutForm">
+                    <input type="hidden" name="invoice_id" value="INV-2026-0314">
+
+                    <h6 class="fw-bold text-secondary mb-3 mt-4">I. TIỀN THUÊ SÂN (RENTAL SESSIONS)</h6>
+                    <table class="table table-bordered text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ngày đá</th>
+                                <th>Sân</th>
+                                <th>Giờ nhận - Giờ trả (Thực tế)</th>
+                                <th>Đơn giá/Buổi</th>
+                                <th>Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>10/03/2026</td>
+                                <td>Sân Mini 1</td>
+                                <td>18:30 - 20:00</td>
+                                <td>400,000 đ</td>
+                                <td>400,000 đ</td>
+                            </tr>
+                            <tr>
+                                <td>14/03/2026</td>
+                                <td>Sân Mini 1</td>
+                                <td>18:30 - <span class="text-danger fw-bold">20:15 (Trả trễ)</span></td>
+                                <td>400,000 đ</td>
+                                <td class="fw-bold">450,000 đ</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold">Tổng tiền sân:</td>
+                                <td class="fw-bold text-primary">850,000 đ</td>
+                                <input type="hidden" id="totalRental" value="850000">
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <h6 class="fw-bold text-secondary mb-3 mt-5">II. DỊCH VỤ PHÁT SINH (FOOD & BEVERAGES)</h6>
+                    <p class="small text-danger fst-italic">* Có thể thay đổi số lượng nếu khách hàng thắc mắc trước khi chốt hóa đơn.</p>
+                    <table class="table table-bordered text-center align-middle" id="itemsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã HH</th>
+                                <th>Tên hàng hóa</th>
+                                <th>Ca đá sử dụng</th>
+                                <th>Đơn giá</th>
+                                <th>Số lượng</th>
+                                <th>Thành tiền</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoiceItemsBody">
+                            <tr>
+                                <td>SP01</td>
+                                <td>Sting Dâu</td>
+                                <td>10/03/2026</td>
+                                <td class="item-price" data-price="15000">15,000 đ</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm qty-input mx-auto" name="item_qty[]" value="4" min="0" onchange="recalculateInvoice()">
+                                </td>
+                                <td class="item-subtotal">60,000 đ</td>
+                                <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeInvoiceItem(this)"><i class="fas fa-times"></i></button></td>
+                            </tr>
+                            <tr>
+                                <td>SP02</td>
+                                <td>Nước suối Aquafina</td>
+                                <td>14/03/2026</td>
+                                <td class="item-price" data-price="10000">10,000 đ</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm qty-input mx-auto" name="item_qty[]" value="5" min="0" onchange="recalculateInvoice()">
+                                </td>
+                                <td class="item-subtotal">50,000 đ</td>
+                                <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeInvoiceItem(this)"><i class="fas fa-times"></i></button></td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="5" class="text-end fw-bold">Tổng tiền dịch vụ:</td>
+                                <td colspan="2" class="fw-bold text-primary text-start" id="displayTotalItems">110,000 đ</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div class="row mt-5 justify-content-end">
+                        <div class="col-md-5">
+                            <table class="table table-borderless text-end fs-5">
+                                <tr>
+                                    <td>Tổng tiền sân:</td>
+                                    <td id="summaryRental">850,000 đ</td>
+                                </tr>
+                                <tr>
+                                    <td>Tổng tiền dịch vụ:</td>
+                                    <td id="summaryItems">110,000 đ</td>
+                                </tr>
+                                <tr class="text-danger border-bottom">
+                                    <td>Tiền cọc đã đóng (Deposit):</td>
+                                    <td>- 500,000 đ</td>
+                                    <input type="hidden" id="depositAmount" value="500000">
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold fs-4">CẦN THANH TOÁN:</td>
+                                    <td class="fw-bold fs-3 text-success" id="finalAmountPaid">460,000 đ</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="text-end mt-4 border-top pt-4">
+                        <button type="button" class="btn btn-secondary me-2" onclick="closeInvoice()">Hủy thao tác</button>
+                        <button type="button" class="btn btn-success btn-lg" onclick="confirmPayment()">
+                            <i class="fas fa-check-circle me-2"></i> Xác Nhận Thanh Toán & In Hóa Đơn
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div> <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+<script>
+    const API_URL = '../api/api_payment.php';
+    let currentInvoiceData = null; // To hold the full invoice details for calculations
+
+    // UTILITY to format currency
+    const formatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+
+    // 1. TÌM KHÁCH HÀNG
+    async function searchCustomer() {
+        const keyword = document.getElementById('searchCustomerInput').value.trim();
+        if (keyword.length < 2) {
+            alert('Vui lòng nhập ít nhất 2 ký tự để tìm kiếm.');
+            return;
+        }
+
+        const customerList = document.getElementById('customerList');
+        customerList.innerHTML = '<li class="list-group-item">Đang tìm kiếm...</li>';
+        document.getElementById('step-2-customer-list').style.display = 'block';
+        document.getElementById('step-3-bookings').style.display = 'none';
+        document.getElementById('step-4-invoice').style.display = 'none';
+
+        try {
+            const response = await fetch(`${API_URL}?action=search_customers&keyword=${keyword}`);
+            const result = await response.json();
+
+            if (result.status === 'success' && result.data.length > 0) {
+                customerList.innerHTML = result.data.map(customer => `
+                    <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer hover-bg-light" 
+                        onclick="selectCustomer(${customer.id}, '${customer.name}')">
+                        <div><strong>${customer.name}</strong><br><small>${customer.phone}</small></div>
+                    </li>
+                `).join('');
+            } else {
+                customerList.innerHTML = '<li class="list-group-item">Không tìm thấy khách hàng nào.</li>';
+            }
+        } catch (error) {
+            console.error('Error searching customer:', error);
+            customerList.innerHTML = '<li class="list-group-item text-danger">Lỗi khi tải dữ liệu.</li>';
+        }
+    }
+
+    // 2. CHỌN KHÁCH -> HIỂN THỊ BOOKING TICKET
+    async function selectCustomer(customerId, customerName) {
+        document.getElementById('step-3-bookings').style.display = 'block';
+        document.getElementById('step-4-invoice').style.display = 'none';
+        
+        const bookingList = document.getElementById('bookingList');
+        bookingList.innerHTML = '<tr><td colspan="5">Đang tải các phiếu đặt...</td></tr>';
+
+        try {
+            const response = await fetch(`${API_URL}?action=get_customer_unpaid_bookings&customer_id=${customerId}`);
+            const result = await response.json();
+            
+            if (result.status === 'success' && result.data.length > 0) {
+                bookingList.innerHTML = result.data.map(booking => `
+                    <tr>
+                        <td><strong>#BK-${booking.id}</strong></td>
+                        <td>(Nhiều sân)</td>
+                        <td>${new Date(booking.start_date).toLocaleDateString()} - ${new Date(booking.end_date).toLocaleDateString()}</td>
+                        <td><span class="badge bg-danger">${booking.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-success" onclick="openInvoice(${booking.id})">
+                                <i class="fas fa-money-bill-wave"></i> Thanh toán
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                bookingList.innerHTML = '<tr><td colspan="5">Khách hàng này không có phiếu đặt nào chưa thanh toán.</td></tr>';
+            }
+        } catch (error) {
+            console.error('Error fetching bookings:', error);
+            bookingList.innerHTML = '<tr><td colspan="5" class="text-danger">Lỗi khi tải dữ liệu.</td></tr>';
+        }
+    }
+
+    // 3. MỞ CHI TIẾT HÓA ĐƠN ĐỂ THANH TOÁN
+    async function openInvoice(bookingId) {
+        document.getElementById('step-4-invoice').style.display = 'block';
+        document.getElementById('step-4-invoice').scrollIntoView({ behavior: 'smooth' });
+        
+        try {
+            const response = await fetch(`${API_URL}?action=get_invoice_details&booking_id=${bookingId}`);
+            const result = await response.json();
+
+            if (result.status !== 'success') {
+                alert('Lỗi: ' + result.message);
+                return;
+            }
+            currentInvoiceData = result.data;
+            renderInvoice();
+        } catch (error) {
+            console.error('Error fetching invoice details:', error);
+            alert('Lỗi hệ thống khi tải chi tiết hóa đơn.');
+        }
+    }
+
+    // RENDER THE INVOICE FROM currentInvoiceData
+    function renderInvoice() {
+        if (!currentInvoiceData) return;
+        
+        const { customer, booking, rental_sessions, used_items } = currentInvoiceData;
+        const invoiceBox = document.getElementById('step-4-invoice');
+
+        // Header
+        invoiceBox.querySelector('.text-primary').textContent = customer.name;
+        invoiceBox.querySelector('p.text-muted:nth-of-type(2)').textContent = `SĐT: ${customer.phone}`;
+        invoiceBox.querySelector('.mb-0.text-muted strong').textContent = `#INV-${booking.id}-${Date.now()}`;
+        invoiceBox.querySelector('.mb-0.text-muted:nth-of-type(2)').textContent = `Ngày xuất: ${new Date().toLocaleDateString()}`;
+        
+        // Rental sessions
+        const rentalBody = invoiceBox.querySelector('table:nth-of-type(1) tbody');
+        let totalRental = 0;
+        rentalBody.innerHTML = rental_sessions.map(s => {
+            totalRental += parseFloat(s.rent_amount);
+            return `
+                <tr>
+                    <td>${new Date(s.play_date).toLocaleDateString()}</td>
+                    <td>${s.court_name}</td>
+                    <td>${s.reception_time.substring(0,5)} - ${s.return_time.substring(0,5)}</td>
+                    <td>${formatter.format(s.price_per_session)}</td>
+                    <td>${formatter.format(s.rent_amount)}</td>
+                </tr>`;
+        }).join('');
+        invoiceBox.querySelector('#totalRental').value = totalRental;
+        invoiceBox.querySelector('table:nth-of-type(1) tfoot .text-primary').textContent = formatter.format(totalRental);
+        
+        // Used items
+        const itemsBody = document.getElementById('invoiceItemsBody');
+        itemsBody.innerHTML = used_items.map(item => `
+             <tr data-item-id="${item.item_id}" data-product-id="${item.product_id}">
+                <td>${item.product_code}</td>
+                <td>${item.product_name}</td>
+                <td>${new Date(rental_sessions.find(s => s.session_id === item.session_id)?.play_date).toLocaleDateString()}</td>
+                <td class="item-price" data-price="${item.unit_price}">${formatter.format(item.unit_price)}</td>
+                <td>
+                    <input type="number" class="form-control form-control-sm qty-input mx-auto" value="${item.quantity}" min="0" onchange="recalculateInvoice()">
+                </td>
+                <td class="item-subtotal">${formatter.format(item.total_amount)}</td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeInvoiceItem(this)"><i class="fas fa-times"></i></button></td>
+            </tr>
+        `).join('');
+
+        // Deposit
+        invoiceBox.querySelector('#depositAmount').value = booking.deposit_amount;
+        
+        recalculateInvoice();
+    }
+
+
+    function closeInvoice() {
+        document.getElementById('step-4-invoice').style.display = 'none';
+        currentInvoiceData = null;
+    }
+
+    // 4. CẬP NHẬT LẠI SỐ LƯỢNG HÀNG HÓA VÀ TÍNH TIỀN
+    function recalculateInvoice() {
+        const rows = document.querySelectorAll('#invoiceItemsBody tr');
+        let totalItemsMoney = 0;
+
+        rows.forEach(row => {
+            const price = parseFloat(row.querySelector('.item-price').dataset.price);
+            const qtyInput = row.querySelector('.qty-input');
+            let qty = parseInt(qtyInput.value);
+            
+            if(qty < 0 || isNaN(qty)) { qty = 0; qtyInput.value = 0; }
+
+            const subtotal = price * qty;
+            row.querySelector('.item-subtotal').textContent = formatter.format(subtotal);
+            totalItemsMoney += subtotal;
+        });
+
+        document.getElementById('displayTotalItems').textContent = formatter.format(totalItemsMoney);
+        document.getElementById('summaryItems').textContent = formatter.format(totalItemsMoney);
+
+        const totalRental = parseFloat(document.getElementById('totalRental').value);
+        const deposit = parseFloat(document.getElementById('depositAmount').value);
+        
+        const finalAmount = totalRental + totalItemsMoney - deposit;
+        
+        document.getElementById('summaryRental').textContent = formatter.format(totalRental);
+        document.querySelector('.text-danger.border-bottom td:nth-child(2)').textContent = `- ${formatter.format(deposit)}`;
+
+        if(finalAmount < 0) {
+            document.getElementById('finalAmountPaid').innerText = `- ${formatter.format(Math.abs(finalAmount))} (Trả lại khách)`;
+        } else {
+            document.getElementById('finalAmountPaid').innerText = formatter.format(finalAmount);
+        }
+    }
+
+    function removeInvoiceItem(btn) {
+        btn.closest('tr').remove();
+        recalculateInvoice();
+    }
+
+    // 5. XÁC NHẬN THANH TOÁN VÀ LƯU VÀO DB
+    async function confirmPayment() {
+        if (!currentInvoiceData) {
+            alert("Không có dữ liệu hóa đơn để thanh toán.");
+            return;
+        }
+
+        const finalItems = [];
+        document.querySelectorAll('#invoiceItemsBody tr').forEach(row => {
+            finalItems.push({
+                id: row.dataset.itemId,
+                product_id: row.dataset.productId,
+                quantity: parseInt(row.querySelector('.qty-input').value),
+                unit_price: parseFloat(row.querySelector('.item-price').dataset.price)
+            });
+        });
+
+        const totalRental = parseFloat(document.getElementById('totalRental').value);
+        const deposit = parseFloat(document.getElementById('depositAmount').value);
+        let totalItems = 0;
+        finalItems.forEach(item => totalItems += item.quantity * item.unit_price);
+        const finalAmount = totalRental + totalItems - deposit;
+
+        const payload = {
+            booking_id: currentInvoiceData.booking.id,
+            user_id: localStorage.getItem("userId") || 1, // Fallback to 1 if not set
+            total_rental: totalRental,
+            total_items: totalItems,
+            deposit: deposit,
+            final_amount: finalAmount,
+            items: finalItems
+        };
+
+        if (!confirm(`Xác nhận thanh toán số tiền: ${formatter.format(finalAmount)}?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}?action=confirm_payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                alert('Thanh toán thành công!');
+                window.location.reload();
+            } else {
+                alert('Lỗi khi thanh toán: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error confirming payment:', error);
+            alert('Lỗi hệ thống khi xác nhận thanh toán.');
+        }
+    }
+
+    // --- AUTH AND UI SCRIPT ---
+    document.addEventListener("DOMContentLoaded", () => {
+        const role = localStorage.getItem("userRole");
+        const name = localStorage.getItem("currentUser");
+
+        if (!role || !name) {
+            alert("Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn!");
+            window.location.href = "index.html";
+            return;
+        }
+
+        if (role === 'staff' && window.location.pathname.includes('dashboard.html')) {
+            alert("Lỗi quyền truy cập: Nhân viên không được phép xem Dashboard!");
+            window.location.href = "booking.html";
+            return;
+        }
+
+        const userDisplay = document.getElementById('currentUserDisplay');
+        if (userDisplay) {
+            const roleText = role === 'manager' ? 'QUẢN LÝ' : 'NHÂN VIÊN';
+            const roleIcon = role === 'manager' ? 'fa-shield-alt' : 'fa-user';
+            const roleBg = role === 'manager' ? 'bg-danger' : 'bg-primary';
+            userDisplay.innerHTML = `
+                <span class="badge ${roleBg} me-3 p-2"><i class="fas ${roleIcon}"></i> ${roleText}</span>
+                <span class="me-3 text-dark"><i class="fas fa-user-tie"></i> <strong>${name}</strong></span>
+            `;
+        }
+
+        const dashboardMenu = document.getElementById('menu-dashboard');
+        if (role === 'staff' && dashboardMenu) {
+            dashboardMenu.style.display = 'none';
+        }
+        
+        // Add listener for Enter key on search input
+        document.getElementById('searchCustomerInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                searchCustomer();
+            }
+        });
+    });
+
+    function handleLogout() {
+        if(confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?")) {
+            localStorage.clear();
+            window.location.href = "index.html";
+        }
+    }
+</script>
+</body>
+</html>

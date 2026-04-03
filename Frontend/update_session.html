@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Sân Bóng Mini - Cập Nhật Dịch Vụ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f4f6f9; overflow-x: hidden; }
+        .sidebar { height: 100vh; background-color: #343a40; color: white; position: fixed; width: 250px; }
+        .sidebar a { color: #c2c7d0; text-decoration: none; padding: 15px 20px; display: block; transition: 0.3s; }
+        .sidebar a:hover, .sidebar a.active { background-color: #494e53; color: white; border-left: 4px solid #007bff; }
+        .main-content { margin-left: 250px; padding: 20px; }
+        
+        /* Ẩn các khối chưa cần thiết ban đầu */
+        #step-2-customer-list, #step-3-bookings, #step-4-session-detail { display: none; }
+        
+        .cursor-pointer { cursor: pointer; }
+        .hover-bg-light:hover { background-color: #f8f9fa; }
+        .table-items th { background-color: #e9ecef; }
+    </style>
+</head>
+<body>
+
+    
+    <div class="sidebar d-print-none">
+        <h4 class="text-center py-4 border-bottom border-secondary">MiniPitch Admin</h4>
+        
+        <a href="dashboard.html" id="menu-dashboard"><i class="fas fa-tachometer-alt me-2"></i> Tổng quan (Dashboard)</a>
+        
+        <a href="booking.html"><i class="fas fa-calendar-check me-2"></i> Đặt sân (Booking)</a>
+        <a href="update_session.html"><i class="fas fa-hamburger me-2"></i> Cập nhật dịch vụ</a>
+        <a href="checkout.html"><i class="fas fa-file-invoice-dollar me-2"></i> Thanh toán</a>
+        <a href="import_goods.html"><i class="fas fa-boxes me-2"></i> Nhập kho</a>
+        
+        <a href="#" onclick="handleLogout()" class="mt-5 text-danger"><i class="fas fa-sign-out-alt me-2"></i> Đăng xuất</a>
+    </div>
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
+            <h4 class="m-0 text-primary">Module: Cập Nhật Dịch Vụ Phiên Đá</h4>
+            <!-- <div>
+                <span class="me-3"><i class="fas fa-user-circle"></i> Nhân viên: <strong>Nguyễn Văn A</strong></span>
+            </div> -->
+            <div id="currentUserDisplay">
+                </div>
+        </div>
+
+        <div class="card shadow-sm mb-4" id="step-1-search">
+            <div class="card-header bg-white fw-bold">1. Tìm phiếu đặt sân theo Khách hàng</div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label">Tên khách hàng hoặc Số điện thoại</label>
+                        <input type="text" class="form-control" id="searchCustomerInput" placeholder="Nhập tên khách hàng...">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" onclick="searchCustomer()"><i class="fas fa-search"></i> Tìm kiếm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="step-2-3-wrapper">
+            <div class="col-md-4" id="step-2-customer-list">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white fw-bold">2. Chọn Khách hàng</div>
+                    <ul class="list-group list-group-flush" id="customerList">
+                        </ul>
+                </div>
+            </div>
+
+            <div class="col-md-8" id="step-3-bookings">
+                <div class="card shadow-sm mb-4 border-primary">
+                    <div class="card-header bg-primary text-white fw-bold">3. Danh sách ca đá (Booking Tickets)</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mã ca</th>
+                                    <th>Sân</th>
+                                    <th>Khung giờ</th>
+                                    <th>Ngày đá</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bookingList">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-lg mb-5 border-success" id="step-4-session-detail">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="m-0"><i class="fas fa-clipboard-list"></i> Cập nhật chi tiết Ca đá: <span id="displaySessionId">#BK-1001</span></h5>
+                <button class="btn btn-sm btn-light" onclick="closeSessionDetail()">Đóng</button>
+            </div>
+            <div class="card-body">
+                <form id="updateSessionForm">
+                    <input type="hidden" name="booking_court_id" id="formBookingCourtId">
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Ngày đá</label>
+                            <input type="date" class="form-control" name="play_date" id="playDate" value="">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Giờ nhận sân (Thực tế)</label>
+                            <input type="time" class="form-control" name="reception_time" value="17:00">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-danger">Giờ trả sân (Thực tế)</label>
+                            <input type="time" class="form-control" name="return_time" value="18:45">
+                            <small class="text-muted">Ghi chú: Khách trả trễ 15 phút.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Tiền sân (Bao gồm phụ phí)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control text-end" name="rent_amount" id="rentAmount" value="450000" onchange="calculateTotal()">
+                                <span class="input-group-text">VNĐ</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">Danh sách nước uống / Dịch vụ sử dụng</h6>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#searchItemModal">
+                            <i class="fas fa-plus"></i> Thêm mặt hàng (More items used)
+                        </button>
+                    </div>
+
+                    <table class="table table-bordered table-items text-center">
+                        <thead>
+                            <tr>
+                                <th>Tên hàng hóa</th>
+                                <th style="width: 150px;">Đơn giá</th>
+                                <th style="width: 120px;">Số lượng</th>
+                                <th style="width: 150px;">Thành tiền</th>
+                                <th style="width: 80px;">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usedItemsTableBody">
+                            </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end fw-bold">Tổng tiền dịch vụ:</td>
+                                <td class="fw-bold text-primary" id="itemsTotalDisplay">0 VNĐ</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div class="alert alert-warning text-end mt-4">
+                        <h4 class="mb-0">TỔNG CỘNG CA ĐÁ: <span id="grandTotalDisplay" class="text-danger fw-bold">450,000 VNĐ</span></h4>
+                        <small>(Tiền sân + Tiền dịch vụ)</small>
+                    </div>
+
+                    <div class="text-end mt-3">
+                        <button type="button" class="btn btn-success btn-lg" onclick="submitUpdate()">
+                            <i class="fas fa-save"></i> Xác nhận & Lưu vào CSDL
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div> <div class="modal fade" id="searchItemModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title">Thêm Hàng Hóa / Dịch Vụ</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="itemSearchKeyword" placeholder="Nhập tên nước uống (VD: Sting, Aquafina)...">
+                        <button class="btn btn-primary" onclick="searchItems()"><i class="fas fa-search"></i> Tìm</button>
+                    </div>
+                    
+                    <ul class="list-group mb-3" id="itemSearchResults">
+                        </ul>
+
+                    <div class="bg-light p-3 rounded border d-none" id="itemInputInterface">
+                        <h6 id="selectedItemName" class="text-primary fw-bold">Sting Dâu</h6>
+                        <div class="row g-2 align-items-center">
+                            <div class="col-5">
+                                <label class="form-label small">Đơn giá</label>
+                                <input type="number" class="form-control form-control-sm" id="selectedItemPrice">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small">Số lượng</label>
+                                <input type="number" class="form-control form-control-sm" id="selectedItemQty" value="1" min="1">
+                            </div>
+                            <div class="col-3 mt-4">
+                                <button type="button" class="btn btn-success btn-sm w-100" onclick="confirmAddItem()">Xác nhận</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 1. TÌM KHÁCH HÀNG
+        async function searchCustomer() {
+            const keyword = document.getElementById('searchCustomerInput').value.trim();
+            if (!keyword) {
+                alert('Vui lòng nhập tên khách hàng hoặc số điện thoại.');
+                return;
+            }
+
+            const response = await fetch(`../api/api_booking.php?action=search_customers&keyword=${encodeURIComponent(keyword)}`);
+            const result = await response.json();
+            if (result.status !== 'success') {
+                alert('Lỗi tìm khách hàng: ' + (result.message || '')); 
+                return;
+            }
+
+            const list = document.getElementById('customerList');
+            list.innerHTML = '';
+            if (result.data.length === 0) {
+                list.innerHTML = '<li class="list-group-item">Không tìm thấy khách hàng.</li>';
+                document.getElementById('step-2-customer-list').style.display = 'block';
+                return;
+            }
+
+            result.data.forEach(customer => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center cursor-pointer hover-bg-light';
+                li.innerHTML = `
+                    <div><strong>${customer.name}</strong><br><small>${customer.phone}</small></div>
+                    <i class="fas fa-chevron-right text-muted"></i>
+                `;
+                li.onclick = () => selectCustomer(customer);
+                list.appendChild(li);
+            });
+
+            document.getElementById('step-2-customer-list').style.display = 'block';
+            document.getElementById('step-3-bookings').style.display = 'none';
+            document.getElementById('step-4-session-detail').style.display = 'none';
+        }
+
+        // 2. CHỌN KHÁCH HÀNG -> HIỂN THỊ CÁC CA ĐÁ CỦA HỌ
+        async function selectCustomer(customer) {
+            document.getElementById('step-3-bookings').style.display = 'block';
+            document.getElementById('step-4-session-detail').style.display = 'none';
+
+            document.getElementById('step-2-customer-list').scrollIntoView({ behavior: 'smooth' });
+
+            const response = await fetch(`../api/api_booking.php?action=customer_bookings&customer_id=${customer.id}`);
+            const result = await response.json();
+            if (result.status !== 'success') {
+                alert('Lỗi lấy booking: ' + (result.message || ''));
+                return;
+            }
+
+            const tbody = document.getElementById('bookingList');
+            tbody.innerHTML = '';
+            if (result.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">Không có booking tồn tại.</td></tr>';
+                return;
+            }
+
+            result.data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>#${item.booking_id}</strong></td>
+                    <td>${item.court_name}</td>
+                    <td>${item.time_slot}</td>
+                    <td>${item.start_date}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="openSessionDetail(${item.booking_court_id}, '${item.booking_id}', '${item.court_name}', '${item.time_slot}')">Nhận/Trả sân</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 3. MỞ GIAO DIỆN NHẬP CHI TIẾT CA ĐÁ
+        function openSessionDetail(bookingCourtId, bookingId, courtName, timeSlot) {
+            document.getElementById('step-4-session-detail').style.display = 'block';
+            document.getElementById('displaySessionId').innerText = "#" + bookingId + ' (' + courtName + ' - ' + timeSlot + ')';
+            document.getElementById('formBookingCourtId').value = bookingCourtId;
+
+            // Mặc định ngày hiện tại khi mở form
+            document.getElementById('playDate').value = new Date().toISOString().slice(0, 10);
+
+            document.getElementById('step-4-session-detail').scrollIntoView({ behavior: 'smooth' });
+            calculateTotal(); // Tính toán lần đầu
+        }
+
+        function closeSessionDetail() {
+            document.getElementById('step-4-session-detail').style.display = 'none';
+        }
+
+        // 4. TÌM HÀNG HÓA TRONG KHO
+        let currentItem = {}; // Biến lưu tạm mặt hàng đang chọn
+
+        async function searchItems() {
+            const keyword = document.getElementById('itemSearchKeyword').value.trim();
+            const results = document.getElementById('itemSearchResults');
+            results.innerHTML = '<li class="list-group-item">Đang tìm...</li>';
+
+            if (!keyword) {
+                results.innerHTML = '<li class="list-group-item">Vui lòng nhập tên sản phẩm cần tìm.</li>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`../api/api_booking.php?action=search_items&keyword=${encodeURIComponent(keyword)}`);
+                const data = await response.json();
+                if (data.status !== 'success' || data.data.length === 0) {
+                    results.innerHTML = '<li class="list-group-item">Không tìm thấy sản phẩm.</li>';
+                    return;
+                }
+
+                results.innerHTML = '';
+                data.data.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item list-group-item-action cursor-pointer';
+                    li.textContent = `${item.name} - ${item.stock_qty} hiện có`;
+                    li.onclick = () => selectItem(item.id, item.name, item.price || 0);
+                    results.appendChild(li);
+                });
+            } catch (error) {
+                results.innerHTML = '<li class="list-group-item text-danger">Lỗi khi tìm sản phẩm.</li>';
+            }
+        }
+
+        // Chọn 1 mặt hàng -> Hiện form nhập số lượng/giá
+        function selectItem(id, name, price) {
+            currentItem = { id, name };
+            document.getElementById('itemInputInterface').classList.remove('d-none');
+            document.getElementById('selectedItemName').innerText = name;
+            document.getElementById('selectedItemPrice').value = price;
+            document.getElementById('selectedItemQty').value = 1; // Reset về 1
+        }
+
+        // 5. XÁC NHẬN THÊM VÀO BẢNG CHÍNH
+        function confirmAddItem() {
+            const price = parseInt(document.getElementById('selectedItemPrice').value);
+            const qty = parseInt(document.getElementById('selectedItemQty').value);
+            const subtotal = price * qty;
+
+            const tbody = document.getElementById('usedItemsTableBody');
+            
+            // Mảng hidden input chuẩn bị cho PHP POST (name="item_id[]")
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-start">
+                    ${currentItem.name}
+                    <input type="hidden" name="item_id[]" value="${currentItem.id}">
+                </td>
+                <td>
+                    <input type="hidden" name="item_price[]" value="${price}">
+                    ${price.toLocaleString()} đ
+                </td>
+                <td>
+                    <input type="hidden" name="item_qty[]" value="${qty}">
+                    ${qty}
+                </td>
+                <td class="item-subtotal fw-bold" data-value="${subtotal}">
+                    ${subtotal.toLocaleString()} đ
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeItem(this)"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+
+            // Đóng Modal và ẩn form nhập
+            var modal = bootstrap.Modal.getInstance(document.getElementById('searchItemModal'));
+            modal.hide();
+            document.getElementById('itemInputInterface').classList.add('d-none');
+            document.getElementById('itemSearchResults').innerHTML = '';
+
+            calculateTotal(); // Tính lại tổng tiền
+        }
+
+        // Xóa mặt hàng khỏi bảng
+        function removeItem(btn) {
+            btn.closest('tr').remove();
+            calculateTotal();
+        }
+
+        // 6. TÍNH TỔNG TIỀN (SÂN + DỊCH VỤ)
+        function calculateTotal() {
+            // Lấy tiền sân
+            let rent = parseInt(document.getElementById('rentAmount').value) || 0;
+            
+            // Tính tổng tiền nước/dịch vụ
+            let itemsTotal = 0;
+            document.querySelectorAll('.item-subtotal').forEach(td => {
+                itemsTotal += parseInt(td.getAttribute('data-value'));
+            });
+
+            // Hiển thị
+            document.getElementById('itemsTotalDisplay').innerText = itemsTotal.toLocaleString() + ' VNĐ';
+            document.getElementById('grandTotalDisplay').innerText = (rent + itemsTotal).toLocaleString() + ' VNĐ';
+        }
+
+        // 7. LƯU VÀO CSDL (PUT API)
+        async function submitUpdate() {
+            const bookingCourtId = document.getElementById('formBookingCourtId').value;
+            const playDate = document.getElementById('playDate').value;
+            const receptionTime = document.querySelector('input[name="reception_time"]').value;
+            const returnTime = document.querySelector('input[name="return_time"]').value;
+            const rentAmount = parseInt(document.getElementById('rentAmount').value) || 0;
+
+            if (!bookingCourtId || !playDate || !receptionTime || !returnTime) {
+                alert('Vui lòng điền đầy đủ thông tin ca đá.');
+                return;
+            }
+
+            const usedItems = [];
+            document.querySelectorAll('#usedItemsTableBody tr').forEach(row => {
+                const productId = row.querySelector('input[name="item_id[]"]').value;
+                const unitPrice = parseInt(row.querySelector('input[name="item_price[]"]').value);
+                const quantity = parseInt(row.querySelector('input[name="item_qty[]"]').value);
+                if (productId && unitPrice > 0 && quantity > 0) {
+                    usedItems.push({ product_id: productId, unit_price: unitPrice, quantity: quantity });
+                }
+            });
+
+            const payload = {
+                booking_court_id: bookingCourtId,
+                play_date: playDate,
+                reception_time: receptionTime,
+                return_time: returnTime,
+                rent_amount: rentAmount,
+                used_items: usedItems
+            };
+
+            const res = await fetch('../api/api_booking.php?action=create_rental_session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+
+            if (result.status === 'success') {
+                alert('Cập nhật thành công! Tổng tiền: ' + (result.data.grand_total || 0).toLocaleString() + ' đ.');
+                window.location.reload();
+            } else {
+                alert('Lỗi khi lưu: ' + (result.message || 'Vui lòng kiểm tra lại.'));
+            }
+        }
+    </script>
+    <script>
+        // Hàm chạy ngay khi trang vừa load xong
+        document.addEventListener("DOMContentLoaded", () => {
+            // Lấy thông tin từ bộ nhớ trình duyệt (đã lưu ở bước Đăng nhập)
+            const role = localStorage.getItem("userRole");
+            const name = localStorage.getItem("currentUser");
+
+            // 1. KIỂM TRA BẢO MẬT: Nếu chưa đăng nhập thì đuổi về trang chủ
+            if (!role || !name) {
+                alert("Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn!");
+                window.location.href = "index.html";
+                return;
+            }
+
+            // 2. PHÂN QUYỀN TRUY CẬP: Nhân viên không được vào trang Dashboard
+            if (role === 'staff' && window.location.pathname.includes('dashboard.html')) {
+                alert("Lỗi quyền truy cập: Nhân viên không được phép xem Dashboard!");
+                window.location.href = "booking.html";
+                return;
+            }
+
+            // 3. ĐỒNG BỘ GIAO DIỆN NAVBAR: In tên và chức danh chính xác
+            const userDisplay = document.getElementById('currentUserDisplay');
+            if (userDisplay) {
+                if (role === 'manager') {
+                    userDisplay.innerHTML = `
+                        <span class="badge bg-danger me-3 p-2"><i class="fas fa-shield-alt"></i> QUẢN LÝ</span>
+                        <span class="me-3 text-dark"><i class="fas fa-user-tie"></i> <strong>${name}</strong></span>
+                    `;
+                } else {
+                    userDisplay.innerHTML = `
+                        <span class="badge bg-primary me-3 p-2"><i class="fas fa-user"></i> NHÂN VIÊN</span>
+                        <span class="me-3 text-dark"><i class="fas fa-user-circle"></i> <strong>${name}</strong></span>
+                    `;
+                }
+            }
+
+            // 4. PHÂN QUYỀN SIDEBAR: Ẩn nút Dashboard nếu là nhân viên
+            const dashboardMenu = document.getElementById('menu-dashboard');
+            if (role === 'staff' && dashboardMenu) {
+                dashboardMenu.style.display = 'none';
+            }
+        });
+
+        // 5. HÀM ĐĂNG XUẤT CHUNG
+        function handleLogout() {
+            if(confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?")) {
+                localStorage.removeItem("currentUser");
+                localStorage.removeItem("userRole");
+                window.location.href = "index.html";
+            }
+        }
+    </script>
+    <script>
+        // Kiểm tra đăng nhập
+        const role = localStorage.getItem("userRole");
+        if (!role) {
+            alert("Bạn chưa đăng nhập! Vui lòng quay lại trang chủ.");
+            window.location.href = "index.html";
+        }
+
+        // Ẩn menu Dashboard ở Sidebar nếu là nhân viên
+        if (role === 'staff') {
+            // Hãy thêm class 'menu-dashboard' vào thẻ <a> Dashboard ở sidebar của các file HTML
+            const dashMenu = document.querySelector('.menu-dashboard');
+            if(dashMenu) dashMenu.style.display = 'none';
+        }
+    </script>
+</body>
+
+
+
+</html>

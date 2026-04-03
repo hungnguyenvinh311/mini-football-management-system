@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Sân Bóng - Đăng Nhập</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            /* Nền gradient hiện đại, thể thao */
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+        .auth-wrapper {
+            width: 100%;
+            max-width: 450px;
+            padding: 15px;
+        }
+        .auth-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .auth-header {
+            background: #f8f9fa;
+            padding: 30px 20px 20px;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .auth-logo {
+            font-size: 40px;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .nav-pills {
+            background: #e9ecef;
+            border-radius: 50px;
+            padding: 5px;
+            margin-bottom: 25px;
+        }
+        .nav-pills .nav-link {
+            border-radius: 50px;
+            color: #6c757d;
+            font-weight: 600;
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #007bff;
+            color: white;
+            box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+        }
+        .input-group-text {
+            background-color: transparent;
+            border-right: none;
+            color: #6c757d;
+        }
+        .form-control {
+            border-left: none;
+        }
+        .form-control:focus {
+            border-color: #ced4da;
+            box-shadow: none;
+        }
+        .input-group:focus-within {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            border-radius: 0.375rem;
+        }
+        .input-group:focus-within .input-group-text,
+        .input-group:focus-within .form-control {
+            border-color: #007bff;
+        }
+        .btn-auth {
+            border-radius: 50px;
+            padding: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-logo"><i class="fas fa-futbol"></i></div>
+                <h4 class="fw-bold text-dark">MiniPitch System</h4>
+                <p class="text-muted small mb-0">Hệ thống quản lý sân bóng mini</p>
+            </div>
+            
+            <div class="card-body p-4">
+                <ul class="nav nav-pills nav-justified" id="authTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="login-tab" data-bs-toggle="pill" data-bs-target="#login" type="button" role="tab">Đăng Nhập</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="register-tab" data-bs-toggle="pill" data-bs-target="#register" type="button" role="tab">Đăng Ký</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="authTabContent">
+                    
+                    <div class="tab-pane fade show active" id="login" role="tabpanel">
+                        <form id="loginForm" onsubmit="handleLogin(event)">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Tên đăng nhập / Email</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input type="text" class="form-control" id="loginUsername" placeholder="Nhập tài khoản..." required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Mật khẩu</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                    <input type="password" class="form-control" id="loginPassword" placeholder="Nhập mật khẩu..." required>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="rememberMe">
+                                    <label class="form-check-label small text-muted" for="rememberMe">Nhớ tài khoản</label>
+                                </div>
+                                <a href="#" class="small text-decoration-none">Quên mật khẩu?</a>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 btn-auth shadow-sm">
+                                <i class="fas fa-sign-in-alt me-2"></i> Đăng Nhập
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="tab-pane fade" id="register" role="tabpanel">
+                        <form id="registerForm" onsubmit="handleRegister(event)">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Họ và Tên</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                    <input type="text" class="form-control" id="regFullName" placeholder="Vd: Nguyễn Văn A" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Bạn là ai?</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="accountRole" id="roleStaff" value="staff" checked>
+                                        <label class="form-check-label text-muted" for="roleStaff">Nhân viên sân</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="accountRole" id="roleManager" value="manager">
+                                        <label class="form-check-label text-muted" for="roleManager">Quản lý (Manager)</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Tên đăng nhập / Email</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                    <input type="email" class="form-control" id="regEmail" placeholder="Nhập email..." required>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-secondary">Mật khẩu</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                    <input type="password" class="form-control" id="regPassword" placeholder="Tạo mật khẩu..." required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100 btn-auth shadow-sm">
+                                <i class="fas fa-user-plus me-2"></i> Tạo Tài Khoản
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-3 text-white-50 small">
+            &copy; 2026 MiniPitch Management System. All rights reserved.
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Xử lý sự kiện Đăng nhập
+        // Xử lý sự kiện Đăng nhập (Phân luồng thẳng vào trang làm việc)
+        function handleLogin(event) {
+            event.preventDefault(); // Ngăn form reload trang
+            
+            const user = document.getElementById('loginUsername').value.trim().toLowerCase();
+            const pass = document.getElementById('loginPassword').value;
+
+            // Giả lập Database Check mật khẩu
+            if (pass !== '123') {
+                alert("Mật khẩu sai! Vui lòng nhập '123' để test.");
+                return;
+            }
+
+            // Phân quyền (Role) và Chuyển hướng thẳng (Direct Routing)
+            if (user === 'admin') {
+                // Là Quản lý -> Lưu phiên và dẫn thẳng tới Dashboard
+                localStorage.setItem("userRole", "manager");
+                localStorage.setItem("currentUser", "Trần Văn Quản Lý");
+                localStorage.setItem("userId", "3");
+                window.location.href = 'dashboard.html'; 
+                
+
+            } else if (user === 'staff') {
+                // Là Nhân viên -> Lưu phiên và dẫn thẳng tới Booking
+                localStorage.setItem("userRole", "staff");
+                localStorage.setItem("currentUser", "Nguyễn Văn Nhân Viên");
+                localStorage.setItem("userId", "4");
+                window.location.href = 'booking.html'; 
+
+            } else {
+                alert("Tài khoản không tồn tại! Hãy dùng 'admin' hoặc 'staff'.");
+            }
+        }
+
+        // Xử lý sự kiện Đăng ký
+        function handleRegister(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('regFullName').value;
+            // Lấy giá trị của Radio button (Vai trò)
+            const role = document.querySelector('input[name="accountRole"]:checked').value; 
+            
+            // Giả lập lưu thành công
+            let roleText = role === 'manager' ? 'Quản lý' : 'Nhân viên';
+            alert(`Đăng ký thành công!\nChào mừng ${roleText}: ${name}.\nHệ thống sẽ chuyển bạn về trang Đăng nhập.`);
+            
+            // Reset form và tự động chuyển Tab về trang Đăng nhập
+            document.getElementById('registerForm').reset();
+            var triggerEl = document.querySelector('#authTab button[data-bs-target="#login"]');
+            bootstrap.Tab.getInstance(triggerEl).show();
+        }
+    </script>
+</body>
+</html>

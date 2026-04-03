@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Sân Bóng Mini - Booking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f4f6f9; overflow-x: hidden; }
+        .sidebar { height: 100vh; background-color: #343a40; color: white; position: fixed; width: 250px; }
+        .sidebar a { color: #c2c7d0; text-decoration: none; padding: 15px 20px; display: block; transition: 0.3s; }
+        .sidebar a:hover, .sidebar a.active { background-color: #494e53; color: white; border-left: 4px solid #007bff; }
+        .main-content { margin-left: 250px; padding: 20px; }
+        .court-card { cursor: pointer; transition: transform 0.2s; }
+        .court-card:hover { transform: translateY(-5px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .court-available { border-left: 5px solid #28a745; }
+        .court-selected { border: 2px solid #0d6efd; background-color: #f0f7ff; }
+        /* Ẩn các bước sau, chỉ hiện khi hoàn thành bước trước */
+        #step-2-courts, #step-3-customer { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar d-print-none">
+        <h4 class="text-center py-4 border-bottom border-secondary">MiniPitch Admin</h4>
+        <a href="dashboard.html" id="menu-dashboard"><i class="fas fa-tachometer-alt me-2"></i> Tổng quan (Dashboard)</a>
+        <a href="booking.html" class="active"><i class="fas fa-calendar-check me-2"></i> Đặt sân (Booking)</a>
+        <a href="update_session.html"><i class="fas fa-hamburger me-2"></i> Cập nhật dịch vụ</a>
+        <a href="checkout.html"><i class="fas fa-file-invoice-dollar me-2"></i> Thanh toán</a>
+        <a href="import_goods.html"><i class="fas fa-boxes me-2"></i> Nhập kho</a>
+        <a href="#" onclick="handleLogout()" class="mt-5 text-danger"><i class="fas fa-sign-out-alt me-2"></i> Đăng xuất</a>
+    </div>
+
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
+            <h4 class="m-0 text-primary">Module: Booking Đặt Sân</h4>
+            <div id="currentUserDisplay"></div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white fw-bold">Bước 1: Tìm sân trống theo khung giờ</div>
+            <div class="card-body">
+                <form id="searchCourtForm" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Ngày đá</label>
+                        <input type="date" class="form-control" name="booking_date" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Khung giờ</label>
+                        <select class="form-select" name="time_slot" required>
+                            <option value="">-- Chọn khung giờ --</option>
+                            <option value="17:00-18:30">17:00 - 18:30</option>
+                            <option value="18:30-20:00">18:30 - 20:00</option>
+                            <option value="20:00-21:30">20:00 - 21:30</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Loại sân</label>
+                        <select class="form-select" name="court_type" required>
+                            <option value="1">Sân 5 người (Mini)</option>
+                            <option value="2">Sân 7 người (Tiêu chuẩn)</option>
+                            <option value="3">Sân 11 người (Ghép 4 sân)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-primary w-100" onclick="searchCourts()">
+                            <i class="fas fa-search"></i> Tìm sân
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <template id="court-card-template">
+            <div class="col-md-3">
+                <div class="card court-card court-available mb-3">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-success"><i class="fas fa-futbol"></i> <span class="t-court-name"></span></h5>
+                        <p class="card-text mb-1 text-muted">Loại: Sân <span class="t-court-type"></span></p>
+                        <span class="badge bg-primary">Giá: <span class="t-court-price"></span> đ/buổi</span>
+                    </div>
+                    <input type="radio" name="selected_court_id" class="d-none t-court-id">
+                </div>
+            </div>
+        </template>
+
+        <div id="step-2-courts" class="mb-4">
+            <h5 class="mb-3">Bước 2: Chọn sân trống (<span class="text-success">Có sẵn</span>)</h5>
+            <div class="row" id="courtList"></div>
+        </div>
+
+       
+
+    <div class="card shadow-sm mb-4" id="step-3-customer">
+        <div class="card-header bg-white fw-bold">Bước 3: Thông tin khách hàng & Chốt lịch</div>
+        <div class="card-body">
+            <form class="row g-3" onsubmit="return false;">
+                <div class="col-md-6">
+                    <label class="form-label">Tìm / Thêm khách hàng</label>
+                    <div class="position-relative">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="searchCustomerInput" placeholder="Nhập tên hoặc SĐT khách hàng...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="searchCustomerBtn()"><i class="fas fa-search"></i> Tìm</button>
+                            <button class="btn btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#newCustomerModal"><i class="fas fa-plus"></i> Khách mới</button>
+                        </div>
+                        <ul class="list-group position-absolute w-100 shadow-sm" id="customerSearchResults" style="display:none; max-height: 200px; overflow-y: auto; z-index: 1000;">
+                            </ul>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Ngày bắt đầu</label>
+                    <input type="date" class="form-control" name="start_date">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Ngày kết thúc (Dự kiến)</label>
+                    <input type="date" class="form-control" name="end_date">
+                </div>
+                <div class="col-12 text-end mt-4">
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#bookingSlipModal" id="btn-open-slip">
+                        <i class="fas fa-file-contract"></i> Tạo Phiếu Đặt Sân
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="newCustomerModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Khách Hàng Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small">Họ và Tên *</label>
+                        <input type="text" class="form-control form-control-sm" id="newCustName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Số điện thoại *</label>
+                        <input type="text" class="form-control form-control-sm" id="newCustPhone" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success w-100" onclick="saveNewCustomerAPI()">Lưu & Chọn khách này</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div> 
+    
+    <div class="modal fade" id="bookingSlipModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">PHIẾU YÊU CẦU ĐẶT SÂN (BOOKING VOUCHER)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-6"><strong id="modal-date">Ngày lập: --</strong></div>
+                        <div class="col-6"><strong id="modal-staff">Nhân viên: --</strong></div>
+                        <div class="col-12 mt-2"><strong id="modal-customer">Khách hàng: --</strong></div>
+                    </div>
+                    <table class="table table-bordered text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sân</th>
+                                <th>Khung giờ</th>
+                                <th>Thời gian thuê</th>
+                                <th>Giá/Buổi</th>
+                                <th>Số buổi</th>
+                                <th>Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-table-body">
+                            </tbody>
+                    </table>
+                    <div class="row mt-3 text-end">
+                        <div class="col-12">
+                            <h5 class="text-danger" id="modal-total-money">Tổng tiền dự kiến: 0 đ</h5>
+                            <div class="input-group justify-content-end align-items-center mt-2">
+                                <label class="me-3 fw-bold">Yêu cầu cọc trước:</label>
+                                <input type="number" class="form-control w-25" name="deposit_amount" value="500000">
+                                <span class="input-group-text">VNĐ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-success" id="btn-submit-booking"><i class="fas fa-print"></i> Lưu & In Phiếu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // ==========================================
+        // 1. STATE & XÁC THỰC NGƯỜI DÙNG
+        // ==========================================
+        let selectedCourtData = null;
+
+        // Hàm gọi API tìm khách hàng
+        async function searchCustomerBtn() {
+            const keyword = document.getElementById('searchCustomerInput').value.trim();
+            const resultList = document.getElementById('customerSearchResults');
+            
+            if (!keyword) {
+                alert("Vui lòng nhập tên hoặc SĐT để tìm!");
+                return;
+            }
+
+            try {
+                const response = await fetch(`../api/api_booking.php?action=search_customers&keyword=${keyword}`);
+                const result = await response.json();
+
+                resultList.innerHTML = ''; // Xóa list cũ
+                resultList.style.display = 'block';
+
+                if (result.status === 'success' && result.data.length > 0) {
+                    result.data.forEach(cust => {
+                        resultList.innerHTML += `
+                            <li class="list-group-item list-group-item-action cursor-pointer" 
+                                onclick="selectCustomerFromList(${cust.id}, '${cust.name}', '${cust.phone}')">
+                                <strong>${cust.name}</strong> - SĐT: ${cust.phone}
+                            </li>
+                        `;
+                    });
+                } else {
+                    resultList.innerHTML = `<li class="list-group-item text-danger">Không tìm thấy khách hàng. Vui lòng bấm "Khách mới".</li>`;
+                }
+            } catch (error) {
+                alert("Lỗi kết nối Backend tìm khách hàng!");
+            }
+        }
+
+        // Hàm xử lý khi click chọn 1 khách hàng từ danh sách Dropdown
+        function selectCustomerFromList(id, name, phone) {
+            selectedCustomerData = { id: id, name: name, phone: phone };
+            
+            // Ghi đè vào ô input cho đẹp và ẩn dropdown
+            document.getElementById('searchCustomerInput').value = `${name} (${phone})`;
+            document.getElementById('customerSearchResults').style.display = 'none';
+        }
+
+        // Ẩn dropdown khi click ra ngoài
+        document.addEventListener('click', function(e) {
+            if (!document.getElementById('searchCustomerInput').contains(e.target)) {
+                document.getElementById('customerSearchResults').style.display = 'none';
+            }
+        });
+
+        // Hàm gọi API tạo khách mới từ Modal
+        async function saveNewCustomerAPI() {
+            const name = document.getElementById('newCustName').value.trim();
+            const phone = document.getElementById('newCustPhone').value.trim();
+
+            if (!name || !phone) {
+                alert("Vui lòng nhập đầy đủ Tên và SĐT!");
+                return;
+            }
+
+            try {
+                const response = await fetch('../api/api_booking.php?action=create_customer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, phone: phone })
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    alert("Đã thêm khách hàng mới thành công!");
+                    
+                    // Đóng modal
+                    bootstrap.Modal.getInstance(document.getElementById('newCustomerModal')).hide();
+                    
+                    // Tự động chọn khách hàng này luôn
+                    selectCustomerFromList(result.data.id, result.data.name, result.data.phone);
+                    
+                    // Xóa trắng form để lần sau dùng
+                    document.getElementById('newCustName').value = '';
+                    document.getElementById('newCustPhone').value = '';
+                } else {
+                    alert("Lỗi: " + result.message);
+                }
+            } catch (error) {
+                alert("Lỗi kết nối Backend lưu khách hàng!");
+            }
+        }
+        let selectedCustomerData = null;
+        const PRICE_PER_SESSION = 400000; 
+
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const name = localStorage.getItem("currentUser");
+            const role = localStorage.getItem("userRole");
+
+            // Kiểm tra bảo mật
+            if (!role || !name) {
+                alert("Bạn chưa đăng nhập! Vui lòng quay lại trang chủ.");
+                window.location.href = "index.html";
+                return;
+            }
+
+            // Phân quyền Dashboard
+            const dashMenu = document.getElementById('menu-dashboard');
+            if (role === 'staff' && dashMenu) {
+                dashMenu.style.display = 'none';
+            }
+
+            // Hiển thị tên Navbar
+            document.getElementById('currentUserDisplay').innerHTML = `
+                <span class="badge ${role === 'manager' ? 'bg-danger' : 'bg-primary'} me-3 p-2">
+                    <i class="fas ${role === 'manager' ? 'fa-user-shield' : 'fa-user'}"></i> ${role === 'manager' ? 'QUẢN LÝ' : 'NHÂN VIÊN'}
+                </span>
+                <span class="me-3"><i class="fas fa-user-circle"></i> <strong>${name}</strong></span>
+            `;
+        });
+
+        function handleLogout() {
+            if(confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?")) {
+                localStorage.clear();
+                window.location.href = "index.html";
+            }
+        }
+
+        // ==========================================
+        // 2. TÌM SÂN & BINDING DỮ LIỆU BẰNG <TEMPLATE>
+        // ==========================================
+        async function searchCourts() {
+            const date = document.querySelector('[name="booking_date"]').value;
+            const timeSlot = document.querySelector('[name="time_slot"]').value;
+            const courtType = document.querySelector('[name="court_type"]').value;
+
+            if (!date || !timeSlot) {
+                alert("Vui lòng chọn Ngày đá và Khung giờ!"); return;
+            }
+
+            try {
+                // Fetch Data từ PHP
+                const response = await fetch(`../api/api_booking.php?action=search_courts&date=${date}&time_slot=${timeSlot}&court_type=${courtType}`);
+                const result = await response.json();
+
+                const courtList = document.getElementById('courtList');
+                courtList.innerHTML = ''; // Clear bảng cũ
+                document.getElementById('step-2-courts').style.display = 'block';
+
+                if (result.status === 'success') {
+                    if (result.data.length === 0) {
+                        courtList.innerHTML = '<div class="col-12"><div class="alert alert-warning">Không có sân trống.</div></div>';
+                        return;
+                    }
+
+                    // SỬ DỤNG TEMPLATE THAY VÌ CHUỖI HTML
+                    const template = document.getElementById('court-card-template');
+
+                    result.data.forEach(court => {
+                        // "Clone" (nhân bản) khung HTML từ thẻ template
+                        const clone = template.content.cloneNode(true);
+
+                        // Bơm dữ liệu vào các class tương ứng
+                        clone.querySelector('.t-court-name').textContent = court.name;
+                        clone.querySelector('.t-court-type').textContent = court.court_type;
+                        clone.querySelector('.t-court-price').textContent = PRICE_PER_SESSION.toLocaleString();
+                        clone.querySelector('.t-court-id').value = court.id;
+
+                        // Tìm phần tử card vừa được clone để gán sự kiện click
+                        const cardElement = clone.querySelector('.court-card');
+                        cardElement.addEventListener('click', function() {
+                            selectCourt(this, court.id, court.name);
+                        });
+
+                        // Đẩy cục HTML đã có dữ liệu ra ngoài giao diện
+                        courtList.appendChild(clone);
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Lỗi kết nối Backend PHP!");
+            }
+        }
+
+        function selectCourt(cardElement, courtId, courtName) {
+            document.querySelectorAll('.court-card').forEach(c => c.classList.remove('court-selected'));
+            cardElement.classList.add('court-selected');
+            cardElement.querySelector('input').checked = true;
+
+            selectedCourtData = { id: courtId, name: courtName };
+
+            document.getElementById('step-3-customer').style.display = 'block';
+            document.getElementById('step-3-customer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ==========================================
+        // 3. XỬ LÝ MODAL & LƯU DATABASE
+        // ==========================================
+        
+        // Lắng nghe sự kiện click vào nút "Tạo Phiếu Đặt Sân"
+        document.querySelector('[data-bs-target="#bookingSlipModal"]').addEventListener('click', function(e) {
+            // 1. Lấy dữ liệu từ các ô input trên giao diện
+            const startDate = document.querySelector('[name="start_date"]').value;
+            const endDate = document.querySelector('[name="end_date"]').value;
+            const timeSlot = document.querySelector('[name="time_slot"]').value;
+
+            // 2. Kiểm tra xem người dùng đã chọn đủ dữ liệu chưa
+            // (selectedCourtData và selectedCustomerData là 2 biến toàn cục ta đã làm ở bước trước)
+            if (!selectedCourtData || !selectedCustomerData || !startDate || !endDate || !timeSlot) {
+                alert("Vui lòng hoàn thành việc chọn sân, khách hàng và thời gian thuê!");
+                e.stopPropagation(); // Dừng việc mở Modal lại nếu thiếu dữ liệu
+                return;
+            }
+
+            // 3. Tính toán logic số buổi và thành tiền
+            const d1 = new Date(startDate);
+            const d2 = new Date(endDate);
+            const diffTime = Math.abs(d2 - d1);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            // Giả định mỗi tuần đá 1 buổi vào đúng khung giờ đó
+            const totalSessions = Math.max(1, Math.floor(diffDays / 7) + 1); 
+            const expectedTotal = totalSessions * PRICE_PER_SESSION;
+
+            // 4. Bơm dữ liệu vào phần Header của Modal
+            const today = new Date().toLocaleDateString('vi-VN');
+            const staffName = localStorage.getItem("currentUser") || "Khách ẩn danh";
+
+            document.getElementById('modal-date').innerHTML = `Ngày lập: ${today}`;
+            document.getElementById('modal-staff').innerHTML = `Nhân viên: ${staffName}`;
+            document.getElementById('modal-customer').innerHTML = `Khách hàng: <strong>${selectedCustomerData.name}</strong> - SĐT: ${selectedCustomerData.phone}`;
+
+            // 5. Bơm dữ liệu vào Table (Chi tiết sân)
+            document.getElementById('modal-table-body').innerHTML = `
+                <tr>
+                    <td class="fw-bold text-success">${selectedCourtData.name}</td>
+                    <td>${timeSlot}</td>
+                    <td>${startDate} <br>đến<br> ${endDate}</td>
+                    <td>${PRICE_PER_SESSION.toLocaleString()} đ</td>
+                    <td class="fw-bold">${totalSessions}</td>
+                    <td class="fw-bold text-primary">${expectedTotal.toLocaleString()} đ</td>
+                </tr>
+            `;
+
+            // 6. Cập nhật dòng Tổng tiền
+            document.getElementById('modal-total-money').innerText = `Tổng tiền dự kiến: ${expectedTotal.toLocaleString()} đ`;
+            
+            // Lưu lại tổng số buổi vào biến toàn cục để lát nữa nhấn "Lưu & In phiếu" sẽ gửi xuống DB
+            selectedCourtData.totalSessions = totalSessions;
+        });       
+
+        // Submit to API
+        document.getElementById('btn-submit-booking').addEventListener('click', async function() {
+            
+            // Ràng buộc kiểm tra
+            if (!selectedCustomerData) {
+                alert("Lỗi: Bạn chưa xác nhận thông tin khách hàng từ hệ thống!");
+                return;
+            }
+
+            
+            const payload = {
+                customer_name: selectedCustomerData.name,    // Lấy từ biến toàn cục
+                customer_phone: selectedCustomerData.phone,  // Lấy từ biến toàn cục
+                user_id: parseInt(localStorage.getItem("userId")), 
+                court_id: selectedCourtData.id,
+                start_date: document.querySelector('[name="start_date"]').value,
+                end_date: document.querySelector('[name="end_date"]').value,
+                time_slot: document.querySelector('[name="time_slot"]').value,
+                price_per_session: PRICE_PER_SESSION,
+                total_sessions: selectedCourtData.totalSessions,
+                deposit: document.querySelector('[name="deposit_amount"]').value
+            };
+
+            try {
+                const response = await fetch('../api/api_booking.php?action=create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    alert(`Thành công! Mã Booking: BK-${result.booking_id}`);
+                    window.location.reload();
+                } else {
+                    alert("Lỗi server: " + result.message);
+                }
+            } catch (error) {
+                alert("Lỗi khi kết nối với máy chủ!");
+            }
+        });
+    </script>
+</body>
+</html>
