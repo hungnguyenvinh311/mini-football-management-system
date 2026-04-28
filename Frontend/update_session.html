@@ -325,8 +325,9 @@
                 data.data.forEach(item => {
                     const li = document.createElement('li');
                     li.className = 'list-group-item list-group-item-action cursor-pointer';
-                    li.textContent = `${item.name} - ${item.stock_qty} hiện có`;
-                    li.onclick = () => selectItem(item.id, item.name, item.price || 0);
+                    const displayPrice = item.unit_price ? item.unit_price.toLocaleString() + ' đ' : '0 đ';
+                    li.textContent = `${item.name} - ${displayPrice} - ${item.stock_qty} hiện có`;
+                    li.onclick = () => selectItem(item.id, item.name, item.unit_price || 0);
                     results.appendChild(li);
                 });
             } catch (error) {
@@ -438,7 +439,16 @@
                 used_items: usedItems
             };
 
-            const res = await fetch('../api/api_booking.php?action=create_rental_session', {
+            const queryParams = new URLSearchParams({
+                action: 'create_rental_session',
+                booking_court_id: bookingCourtId,
+                play_date: playDate,
+                reception_time: receptionTime,
+                return_time: returnTime,
+                rent_amount: rentAmount.toString()
+            });
+
+            const res = await fetch(`../api/api_booking.php?${queryParams.toString()}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

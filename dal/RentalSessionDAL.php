@@ -4,13 +4,30 @@ class RentalSessionDAL {
 
     public function __construct($db) { $this->conn = $db; }
 
-    // Tạo ca đá mới khi khách nhận sân
-    public function createSession($bookingCourtId, $playDate, $receptionTime) {
-        $query = "INSERT INTO rental_sessions (booking_court_id, play_date, reception_time) 
-                  VALUES (:bc_id, :play_date, :reception_time) RETURNING id";
+    // Tạo ca đá mới khi khách nhận sân, thêm dịch vụ cùng lúc bằng stored procedure
+    public function createSessionWithItems($bookingCourtId, $playDate, $receptionTime, $returnTime, $rentAmount, $usedItemsJson) {
+        $query = "CALL sp_create_rental_session(
+            CAST(:bc_id AS INT),
+            CAST(:play_date AS DATE),
+            CAST(:reception_time AS TIME),
+            CAST(:return_time AS TIME),
+            CAST(:rent_amount AS NUMERIC),
+            CAST(:used_items AS JSONB),
+            NULL
+        )";
         $stmt = $this->conn->prepare($query);
-        $stmt->execute(['bc_id' => $bookingCourtId, 'play_date' => $playDate, 'reception_time' => $receptionTime]);
-        return $stmt->fetchColumn();
+        $stmt->execute([
+            'bc_id' => $bookingCourtId,
+            'play_date' => $playDate,
+            'reception_time' => $receptionTime,
+            'return_time' => $returnTime,
+            'rent_amount' => $rentAmount,
+            'used_items' => $usedItemsJson
+        ]);
+
+        // Stored procedure returns OUT parameter as result row
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? $result['o_session_id'] : false;
     }
 
     // Cập nhật giờ trả sân và tiền sân (có thể tăng do trễ giờ)

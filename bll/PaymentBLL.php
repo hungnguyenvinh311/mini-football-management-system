@@ -1,20 +1,17 @@
 <?php
 require_once '../dal/PaymentDAL.php';
-require_once '../dal/ProductDAL.php';
 require_once '../dal/BookingDAL.php';
 require_once '../dal/CustomerDAL.php';
 
 class PaymentBLL {
     private $db;
     private $paymentDAL;
-    private $productDAL;
     private $bookingDAL;
     private $customerDAL;
 
     public function __construct($db) {
         $this->db = $db;
         $this->paymentDAL = new PaymentDAL($db);
-        $this->productDAL = new ProductDAL($db);
         $this->bookingDAL = new BookingDAL($db);
         $this->customerDAL = new CustomerDAL($db);
     }
@@ -43,14 +40,12 @@ class PaymentBLL {
             $deposit = $data['deposit'];
             $finalAmount = $data['final_amount'];
 
-            // 1. Get the original state of the invoice from the DB
             $originalInvoice = $this->paymentDAL->getInvoiceDetails($bookingId);
             if (!$originalInvoice) {
                 throw new Exception("Booking không tồn tại.");
             }
             $originalItems = $originalInvoice['used_items'];
-            
-            // 2. Process changes in used items and update stock
+
             $originalItemsMap = [];
             foreach ($originalItems as $item) {
                 $originalItemsMap[$item['item_id']] = $item;
@@ -63,21 +58,19 @@ class PaymentBLL {
                     if (isset($originalItemsMap[$item['id']])) {
                         $originalItem = $originalItemsMap[$item['id']];
                         if ($originalItem['quantity'] != $item['quantity']) {
-                            $quantityChange = $originalItem['quantity'] - $item['quantity'];
-                            $this->productDAL->updateStock($item['product_id'], $quantityChange);
+                            $newTotal = $item['unit_price'] * $item['quantity'];
+                            $this->paymentDAL->updateSessionUsedItemQuantity($item['id'], $item['quantity'], $newTotal);
                         }
                     }
                 }
             }
-            
+
             foreach ($originalItems as $originalItem) {
                 if (!isset($finalItemsMap[$originalItem['item_id']])) {
-                    $this->productDAL->updateStock($originalItem['product_id'], $originalItem['quantity']);
                     $this->paymentDAL->deleteSessionUsedItem($originalItem['item_id']);
                 }
             }
 
-            // 3. Update booking status to 'paid' and set the final amount
             $this->paymentDAL->confirmBookingPayment($bookingId, $finalAmount);
 
             $this->db->commit();
@@ -96,7 +89,7 @@ class PaymentBLL {
 
     public function getCustomerUnpaidBookings($customerId) {
         // Logic nghiệp vụ: Có thể thêm filter theo user permissions, etc.
-        return $this->bookingDAL->getUnpaidBookingsByCustomer($customerId);
+        return $this->paymentDAL->getCustomerUnpaidBookings($customerId);
     }
 }
 ?>

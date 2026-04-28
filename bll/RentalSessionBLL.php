@@ -17,23 +17,26 @@ class RentalSessionBLL {
         try {
             $this->db->beginTransaction();
 
-            $sessionId = $this->rentalSessionDAL->createSession($bookingCourtId, $playDate, $receptionTime);
+            $usedItemsJson = !empty($usedItems) ? json_encode($usedItems) : null;
+            $sessionId = $this->rentalSessionDAL->createSessionWithItems(
+                $bookingCourtId,
+                $playDate,
+                $receptionTime,
+                $returnTime,
+                $rentAmount,
+                $usedItemsJson
+            );
+
             if (!$sessionId) {
                 throw new Exception('Không tạo được phiên thuê.');
             }
-
-            $this->rentalSessionDAL->updateCheckout($sessionId, $returnTime, $rentAmount);
 
             $totalService = 0;
             foreach ($usedItems as $item) {
                 if (empty($item['product_id']) || empty($item['unit_price']) || empty($item['quantity'])) {
                     continue;
                 }
-                $amount = $item['unit_price'] * $item['quantity'];
-                $this->rentalSessionDAL->addUsedItem($sessionId, $item['product_id'], $item['unit_price'], $item['quantity'], $amount);
-
-                $this->productDAL->updateStock($item['product_id'], - $item['quantity']);
-                $totalService += $amount;
+                $totalService += $item['unit_price'] * $item['quantity'];
             }
 
             $this->db->commit();

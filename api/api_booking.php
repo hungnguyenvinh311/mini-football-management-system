@@ -2,7 +2,8 @@
 // Cho phép các request từ Frontend (CORS)
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST, GET");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 // Khai báo các class BLL cần thiết
 require_once '../config/Database.php';
@@ -14,8 +15,27 @@ require_once '../bll/DashboardBLL.php';
 $database = new Database();
 $db = $database->getConnection();
 
-// Lấy tham số action từ URL
-$action = isset($_GET['action']) ? $_GET['action'] : '';
+// Xử lý OPTIONS cho CORS preflight
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// Lấy tham số action từ GET trước, nếu không có thì thử POST
+$action = '';
+if (isset($_GET['action'])) {
+    $action = $_GET['action'];
+} elseif (isset($_POST['action'])) {
+    $action = $_POST['action'];
+} elseif (isset($_REQUEST['action'])) {
+    $action = $_REQUEST['action'];
+} elseif (!empty($_SERVER['REQUEST_URI'])) {
+    $query = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+    parse_str($query, $queryParams);
+    if (isset($queryParams['action'])) {
+        $action = $queryParams['action'];
+    }
+}
 
 // ==========================================
 // 1. ENDPOINT: TÌM SÂN TRỐNG
@@ -85,12 +105,45 @@ if ($action === 'search_items' && $_SERVER['REQUEST_METHOD'] === 'GET') {
 // ==========================================
 // 2d. ENDPOINT: TẠO HOẶC CẬP NHẬT PHIÊN THUÊ
 // ==========================================
-if ($action === 'create_rental_session' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = json_decode(file_get_contents("php://input"), true);
+if ($action === 'create_rental_session') {
+    $rawInput = file_get_contents("php://input");
+    $data = json_decode($rawInput, true);
+    if (!is_array($data)) {
+        $data = [];
+    }
+
+    // Fallback khi body JSON không có hoặc request bị gửi dưới dạng GET/POST form data
+    $fallbackFields = ['booking_court_id', 'play_date', 'reception_time', 'return_time', 'rent_amount'];
+    foreach ($fallbackFields as $field) {
+        if (!isset($data[$field]) || $data[$field] === null || $data[$field] === '') {
+            if (isset($_REQUEST[$field])) {
+                $data[$field] = $_REQUEST[$field];
+            }
+        }
+    }
+
+    // Dùng fallback với used_items nếu có
+    if (!isset($data['used_items']) || $data['used_items'] === null) {
+        if (isset($_REQUEST['used_items'])) {
+            $decodedItems = json_decode($_REQUEST['used_items'], true);
+            $data['used_items'] = is_array($decodedItems) ? $decodedItems : [];
+        }
+    }
+
     $required = ['booking_court_id', 'play_date', 'reception_time', 'return_time', 'rent_amount'];
     foreach ($required as $f) {
-        if (empty($data[$f])) {
-            echo json_encode(["status" => "error", "message" => "Thiếu dữ liệu: $f"]);
+        $value = $data[$f] ?? null;
+        if ($value === null || $value === '') {
+            echo json_encode([
+                "status" => "error",
+                "message" => "Thiếu dữ liệu: $f",
+                "debug" => [
+                    "raw_input" => $rawInput,
+                    "json_error" => json_last_error_msg(),
+                    "parsed_data" => $data,
+                    "request_keys" => array_keys($_REQUEST)
+                ]
+            ]);
             exit();
         }
     }
@@ -139,6 +192,17 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 // ==========================================
 // NẾU ACTION KHÔNG KHỚP VỚI BẤT KỲ TRƯỜNG HỢP NÀO Ở TRÊN
 // ==========================================
-echo json_encode(["status" => "error", "message" => "Invalid endpoint. Hãy kiểm tra lại tên action."]);
+http_response_code(400);
+echo json_encode([
+    "status" => "error",
+    "message" => "Invalid endpoint. Hãy kiểm tra lại tên action.",
+    "debug" => [
+        "action" => $action,
+        "method" => $_SERVER['REQUEST_METHOD'],
+        "query_string" => $_SERVER['QUERY_STRING'] ?? '',
+        "request_uri" => $_SERVER['REQUEST_URI'] ?? '',
+        "content_type" => $_SERVER['CONTENT_TYPE'] ?? ''
+    ]
+]);
 exit();
 ?>

@@ -4,7 +4,7 @@ class ProductDAL {
     public function __construct($db) { $this->conn = $db; }
 
     public function searchByName($keyword) {
-        $query = "SELECT id, code, name, stock_qty FROM products WHERE UPPER(name) LIKE UPPER(:keyword)";
+        $query = "SELECT id, code, name, stock_qty, unit_price FROM products WHERE UPPER(name) LIKE UPPER(:keyword)";
         $stmt = $this->conn->prepare($query);
         $stmt->execute(['keyword' => "%$keyword%"]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

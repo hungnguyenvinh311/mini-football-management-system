@@ -1,7 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST, GET");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 require_once '../config/Database.php';
@@ -10,7 +10,32 @@ require_once '../bll/PaymentBLL.php';
 $database = new Database();
 $db = $database->getConnection();
 
-$action = isset($_GET['action']) ? $_GET['action'] : die();
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+$action = '';
+if (isset($_GET['action'])) {
+    $action = $_GET['action'];
+} elseif (isset($_POST['action'])) {
+    $action = $_POST['action'];
+} elseif (isset($_REQUEST['action'])) {
+    $action = $_REQUEST['action'];
+}
+
+if (empty($action)) {
+    http_response_code(400);
+    echo json_encode([
+        "status" => "error",
+        "message" => "Missing action parameter.",
+        "debug" => [
+            "method" => $_SERVER['REQUEST_METHOD'],
+            "query_string" => $_SERVER['QUERY_STRING'] ?? ''
+        ]
+    ]);
+    exit();
+}
 
 switch ($action) {
     case 'search_customers':
