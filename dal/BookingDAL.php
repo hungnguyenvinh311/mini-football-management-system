@@ -4,17 +4,24 @@ class BookingDAL {
 
     public function __construct($db) { $this->conn = $db; }
 
-    public function createBooking($customerId, $userId, $startDate, $endDate, $expectedAmount, $deposit) {
-        $query = "INSERT INTO bookings (customer_id, user_id, start_date, end_date, total_expected_amount, deposit_amount) 
-                  VALUES (:customer_id, :user_id, :start_date, :end_date, :total, :deposit) RETURNING id";
+    public function callDatSanProcedure($userId, $name, $phone, $courtId, $timeSlot, $amount, $deposit) {
+    try {
+        $query = "CALL DatSan(:user_id, :name, :phone, :court_id, :timeslot, :amount, :deposit)";
         $stmt = $this->conn->prepare($query);
         $stmt->execute([
-            'customer_id' => $customerId, 'user_id' => $userId, 
-            'start_date' => $startDate, 'end_date' => $endDate, 
-            'total' => $expectedAmount, 'deposit' => $deposit
+            'user_id' => $userId,
+            'name' => $name,
+            'phone' => $phone,
+            'court_id' => $courtId,
+            'timeslot' => $timeSlot,
+            'amount' => $amount,
+            'deposit' => $deposit
         ]);
-        return $stmt->fetchColumn();
+        return true;
+    } catch (PDOException $e) {
+        throw new Exception($e->getMessage()); // Bắt lỗi EXCEPTION từ PostgreSQL trả về (ví dụ: Trùng giờ)
     }
+}
 
     public function addBookingCourt($bookingId, $courtId, $timeSlot, $pricePerSession) {
         $query = "INSERT INTO booking_courts (booking_id, court_id, time_slot, price_per_session) 

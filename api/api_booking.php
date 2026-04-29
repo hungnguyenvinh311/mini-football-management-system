@@ -178,9 +178,42 @@ if ($action === 'create_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 // ==========================================
 // 4. ENDPOINT: LƯU PHIẾU ĐẶT SÂN (BOOKING)
 // ==========================================
+// ==========================================
+// 4. ENDPOINT: LƯU PHIẾU ĐẶT SÂN (BOOKING)
+// ==========================================
 if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = json_decode(file_get_contents("php://input"), true);
+    $rawInput = file_get_contents("php://input");
+    $data = json_decode($rawInput, true);
     
+    if (!is_array($data)) {
+        $data = [];
+    }
+
+    // Danh sách các trường dữ liệu BẮT BUỘC phải có để gọi Procedure DatSan
+    $requiredFields = [
+        'user_id', 
+        'customer_name', 
+        'customer_phone', 
+        'court_id', 
+        'time_slot', 
+        'price_per_session', 
+        'deposit'
+    ];
+
+    // Kiểm tra xem Frontend có gửi thiếu trường nào không
+    foreach ($requiredFields as $field) {
+        if (!isset($data[$field]) || $data[$field] === '') {
+            echo json_encode([
+                "status" => "error",
+                "message" => "Thiếu dữ liệu bắt buộc: $field",
+                "debug" => [
+                    "received_data" => $data
+                ]
+            ]);
+            exit();
+        }
+    }
+
     // Đẩy dữ liệu vào tầng Logic xử lý (BLL)
     $bookingBLL = new BookingBLL($db);
     $result = $bookingBLL->createNewBooking($data);
