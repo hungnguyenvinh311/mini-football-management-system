@@ -3,6 +3,7 @@ class Database {
     private $host = "localhost";
     private $port = "5432";
     private $db_name = "quanlysanbong";
+    //private $db_name = "MiniPitch";
     private $username = "postgres";
     private $password = "123456";
     public $conn;
