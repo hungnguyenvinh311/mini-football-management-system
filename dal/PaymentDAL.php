@@ -48,15 +48,6 @@ class PaymentDAL {
         return $response;
     }
 
-    public function confirmBookingPayment($bookingId, $finalAmount) {
-        $query = "CALL sp_confirm_booking_payment(:booking_id, :total_amount)";
-        $stmt = $this->conn->prepare($query);
-        return $stmt->execute([
-            'booking_id' => $bookingId,
-            'total_amount' => $finalAmount
-        ]);
-    }
-
     public function getCustomerUnpaidBookings($customerId) {
         $query = "SELECT * FROM vw_unpaid_bookings WHERE customer_id = :customer_id";
         $stmt = $this->conn->prepare($query);
@@ -75,5 +66,23 @@ class PaymentDAL {
         $stmt = $this->conn->prepare($query);
         return $stmt->execute(['id' => $itemId]);
     }
-}
+    
+    // Gọi Procedure ThanhToan của SQL
+    public function callThanhToanProcedure($sessionId) {
+        try {
+            $query = "CALL ThanhToan(:session_id)";
+            $stmt = $this->conn->prepare($query);
+            return $stmt->execute(['session_id' => $sessionId]);
+        } catch (PDOException $e) {
+            throw new Exception("Lỗi khi thanh toán ca đá $sessionId: " . $e->getMessage());
+        }
+    }
+
+    // Cập nhật trạng thái của Booking tổng thành 'completed'
+    public function completeBooking($bookingId) {
+        $query = "UPDATE bookings SET status = 'completed' WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute(['id' => $bookingId]);
+    }
+} // <--- Dấu ngoặc đóng class quan trọng mà bạn bị thiếu
 ?>

@@ -17,8 +17,6 @@ class PaymentBLL {
     }
 
     public function getInvoiceDetails($bookingId) {
-        // Here you could add business logic, e.g., calculating late fees, applying discounts, etc.
-        // For now, it directly calls the DAL and returns the data.
         $invoiceData = $this->paymentDAL->getInvoiceDetails($bookingId);
 
         if (!$invoiceData) {
@@ -35,10 +33,8 @@ class PaymentBLL {
             $bookingId = $data['booking_id'];
             $userId = $data['user_id'];
             $finalItems = $data['items'];
-            $totalRental = $data['total_rental'];
-            $totalItems = $data['total_items'];
-            $deposit = $data['deposit'];
-            $finalAmount = $data['final_amount'];
+            // Các biến tính toán bên giao diện gửi lên (totalRental, totalItems, deposit, finalAmount) 
+            // có thể giữ lại để ghi log hoặc đối chiếu sau này nếu cần thiết.
 
             $originalInvoice = $this->paymentDAL->getInvoiceDetails($bookingId);
             if (!$originalInvoice) {
@@ -46,6 +42,7 @@ class PaymentBLL {
             }
             $originalItems = $originalInvoice['used_items'];
 
+            // 1. CẬP NHẬT LẠI SỐ LƯỢNG ĐỒ UỐNG TRƯỚC (NẾU KHÁCH TRẢ LẠI)
             $originalItemsMap = [];
             foreach ($originalItems as $item) {
                 $originalItemsMap[$item['item_id']] = $item;
@@ -71,10 +68,20 @@ class PaymentBLL {
                 }
             }
 
-            $this->paymentDAL->confirmBookingPayment($bookingId, $finalAmount);
+            // 2. LẶP QUA TỪNG CA ĐÁ VÀ GỌI PROCEDURE SQL ĐỂ TRỪ KHO VÀ CHỐT THANH TOÁN
+            $sessions = $originalInvoice['rental_sessions'];
+            foreach ($sessions as $session) {
+                // Đảm bảo chỉ thanh toán các ca chưa trả tiền
+                if (isset($session['payment_status']) && $session['payment_status'] === 'unpaid') {
+                    $this->paymentDAL->callThanhToanProcedure($session['session_id']);
+                }
+            }
+
+            // 3. ĐÁNH DẤU HỢP ĐỒNG TỔNG (BOOKING) LÀ ĐÃ HOÀN TẤT
+            $this->paymentDAL->completeBooking($bookingId);
 
             $this->db->commit();
-            return ["status" => "success", "message" => "Thanh toán thành công!"];
+            return ["status" => "success", "message" => "Thanh toán thành công! Kho đã được trừ tự động."];
 
         } catch (Exception $e) {
             $this->db->rollBack();
@@ -83,12 +90,10 @@ class PaymentBLL {
     }
 
     public function searchCustomers($keyword) {
-        // Logic nghiệp vụ: Validate keyword, etc.
         return $this->customerDAL->searchByNameOrPhone($keyword);
     }
 
     public function getCustomerUnpaidBookings($customerId) {
-        // Logic nghiệp vụ: Có thể thêm filter theo user permissions, etc.
         return $this->paymentDAL->getCustomerUnpaidBookings($customerId);
     }
 }

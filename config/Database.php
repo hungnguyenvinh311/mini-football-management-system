@@ -15,7 +15,6 @@ class Database {
             $this->conn = new PDO($dsn, $this->username, $this->password);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch(PDOException $exception) {
-            // Dừng thực thi và trả về lỗi JSON để phía Frontend có thể bắt được
             http_response_code(500);
             echo json_encode([
                 "status" => "error",
