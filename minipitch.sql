@@ -103,7 +103,8 @@ SELECT rs.id AS session_id,
        rs.reception_time,
        rs.return_time,
        rs.rent_amount,
-       bc.price_per_session
+       bc.price_per_session,
+       rs.payment_status
 FROM rental_sessions rs
 JOIN booking_courts bc ON rs.booking_court_id = bc.id
 JOIN courts c ON bc.court_id = c.id;
