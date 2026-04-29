@@ -137,7 +137,7 @@ FROM bookings b
 JOIN customers c ON b.customer_id = c.id;
 
 -- Stored procedure tạo ca thuê và thêm dịch vụ trong cùng một lần gọi
-CREATE PROCEDURE sp_create_rental_session(
+CREATE OR REPLACE PROCEDURE sp_create_rental_session(
     IN p_booking_court_id INT,
     IN p_play_date DATE,
     IN p_reception_time TIME,
@@ -151,10 +151,18 @@ AS $$
 DECLARE
     item RECORD;
 BEGIN
-    INSERT INTO rental_sessions (booking_court_id, play_date, reception_time, return_time, rent_amount)
-    VALUES (p_booking_court_id, p_play_date, p_reception_time, p_return_time, p_rent_amount)
+    UPDATE rental_sessions
+    SET reception_time = p_reception_time,
+        return_time = p_return_time,
+        rent_amount = p_rent_amount
+    WHERE booking_court_id = p_booking_court_id 
+      AND play_date = p_play_date
+      AND payment_status = 'unpaid'
     RETURNING id INTO o_session_id;
-
+    IF o_session_id IS NULL THEN
+        RAISE EXCEPTION 'Không tìm thấy ca đá nào đang chờ nhận sân trong ngày này!';
+    END IF;
+    DELETE FROM session_used_items WHERE session_id = o_session_id;
     IF p_used_items IS NOT NULL THEN
         FOR item IN SELECT * FROM jsonb_to_recordset(p_used_items) AS x(product_id INT, unit_price DECIMAL, quantity INT) LOOP
             INSERT INTO session_used_items (session_id, product_id, unit_price, quantity, total_amount)
