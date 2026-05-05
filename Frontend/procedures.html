@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Sân Bóng Mini - Procedures & Triggers</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f4f6f9; overflow-x: hidden; }
+        .sidebar { height: 100vh; background-color: #343a40; color: white; position: fixed; width: 250px; }
+        .sidebar a { color: #c2c7d0; text-decoration: none; padding: 15px 20px; display: block; transition: 0.3s; }
+        .sidebar a:hover, .sidebar a.active { background-color: #494e53; color: white; border-left: 4px solid #007bff; }
+        .main-content { margin-left: 250px; padding: 20px; }
+        .section-card { border-left: 4px solid; margin-bottom: 20px; }
+        .section-8-1 { border-left-color: #0d6efd; }
+        .section-8-2 { border-left-color: #198754; }
+        .section-8-3 { border-left-color: #6f42c1; }
+        .section-9 { border-left-color: #dc3545; }
+        .nav-pills .nav-link.active { background-color: #343a40; }
+    </style>
+</head>
+<body>
+    <div class="sidebar d-print-none">
+        <h4 class="text-center py-4 border-bottom border-secondary">MiniPitch Admin</h4>
+        <a href="dashboard.html" id="menu-dashboard"><i class="fas fa-tachometer-alt me-2"></i> Tổng quan (Dashboard)</a>
+        <a href="booking.html"><i class="fas fa-calendar-check me-2"></i> Đặt sân (Booking)</a>
+        <a href="update_session.html"><i class="fas fa-hamburger me-2"></i> Cập nhật dịch vụ</a>
+        <a href="checkout.html"><i class="fas fa-file-invoice-dollar me-2"></i> Thanh toán</a>
+        <a href="import_goods.html"><i class="fas fa-boxes me-2"></i> Nhập kho</a>
+        <a href="procedures.html" class="active"><i class="fas fa-cogs me-2"></i> Procedures & Triggers</a>
+        <a href="#" onclick="handleLogout()" class="mt-5 text-danger"><i class="fas fa-sign-out-alt me-2"></i> Đăng xuất</a>
+    </div>
+
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
+            <h4 class="m-0 text-dark"><i class="fas fa-cogs me-2"></i> Procedures & Triggers Management</h4>
+            <div id="currentUserDisplay"></div>
+        </div>
+
+        <!-- NAV TABS -->
+        <ul class="nav nav-pills mb-4" id="mainTab">
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="pill" href="#tab81"><i class="fas fa-calendar-alt me-1"></i> 8.1 Sinh lịch tự động</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#tab82"><i class="fas fa-file-invoice me-1"></i> 8.2 Hóa đơn gom</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#tab83"><i class="fas fa-search me-1"></i> 8.3 Tìm sân trống (Ghép)</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#tab9"><i class="fas fa-bolt me-1"></i> 9. Triggers & Sân ghép</a></li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- TAB 8.1 -->
+            <div class="tab-pane fade show active" id="tab81">
+                <div class="card section-card section-8-1 shadow-sm">
+                    <div class="card-header bg-white fw-bold"><i class="fas fa-calendar-alt text-primary me-2"></i> 8.1: Tự động sinh lịch chơi (sp_generate_monthly_sessions)</div>
+                    <div class="card-body">
+                        <p class="text-muted small">Procedure này tự động tạo các ca đá (rental_sessions) cho toàn bộ thời hạn hợp đồng, theo đúng thứ trong tuần được chọn.</p>
+                        <div class="row g-3 align-items-end mb-4">
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold">Chọn Booking (Hợp đồng)</label>
+                                <select class="form-select" id="sel81Booking"><option value="">-- Đang tải... --</option></select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Thứ trong tuần</label>
+                                <select class="form-select" id="sel81Day">
+                                    <option value="1">Thứ 2</option><option value="2">Thứ 3</option><option value="3">Thứ 4</option>
+                                    <option value="4">Thứ 5</option><option value="5">Thứ 6</option><option value="6">Thứ 7</option><option value="0">Chủ nhật</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-primary w-100" onclick="generateSchedule()"><i class="fas fa-magic me-1"></i> Sinh lịch tự động</button>
+                            </div>
+                        </div>
+                        <div id="result81" style="display:none">
+                            <h6 class="fw-bold text-success"><i class="fas fa-check-circle"></i> Kết quả: <span id="result81Count"></span> ca đá đã được tạo</h6>
+                            <div class="table-responsive"><table class="table table-bordered table-sm text-center"><thead class="table-light"><tr><th>ID</th><th>Ngày đá</th><th>Sân</th><th>Khung giờ</th><th>Tiền thuê</th><th>Trạng thái</th></tr></thead><tbody id="result81Body"></tbody></table></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 8.2 -->
+            <div class="tab-pane fade" id="tab82">
+                <div class="card section-card section-8-2 shadow-sm">
+                    <div class="card-header bg-white fw-bold"><i class="fas fa-file-invoice text-success me-2"></i> 8.2: Hóa đơn gom (fn_get_consolidated_invoice)</div>
+                    <div class="card-body">
+                        <p class="text-muted small">Function này gom tất cả chi phí của 1 ca đá: Tiền sân + Tiền phạt trả trễ + Tiền nước uống/dịch vụ.</p>
+                        <div class="row g-3 align-items-end mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Chọn Booking</label>
+                                <select class="form-select" id="sel82Booking" onchange="loadSessions82()"><option value="">-- Chọn booking --</option></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Chọn Ca đá (Session)</label>
+                                <select class="form-select" id="sel82Session"><option value="">-- Chọn booking trước --</option></select>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-success w-100" onclick="getInvoice()"><i class="fas fa-calculator me-1"></i> Xem hóa đơn gom</button>
+                            </div>
+                        </div>
+                        <div id="result82" style="display:none" class="alert alert-success">
+                            <h5><i class="fas fa-receipt"></i> Kết quả hóa đơn gom</h5>
+                            <table class="table table-bordered mb-0 bg-white">
+                                <tr><td class="fw-bold">Mã ca đá (Session ID)</td><td id="inv_session_id"></td></tr>
+                                <tr><td class="fw-bold">Tiền thuê sân gốc</td><td id="inv_rent"></td></tr>
+                                <tr><td class="fw-bold">Tổng tiền dịch vụ (nước, đồ ăn)</td><td id="inv_service"></td></tr>
+                                <tr class="table-warning"><td class="fw-bold fs-5">TỔNG CỘNG (Grand Total)</td><td class="fw-bold fs-5 text-danger" id="inv_total"></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 8.3 -->
+            <div class="tab-pane fade" id="tab83">
+                <div class="card section-card section-8-3 shadow-sm">
+                    <div class="card-header bg-white fw-bold"><i class="fas fa-search text-purple me-2" style="color:#6f42c1"></i> 8.3: Tìm sân trống - Xử lý sân ghép (fn_find_available_courts)</div>
+                    <div class="card-body">
+                        <p class="text-muted small">Function này tìm sân trống có xử lý logic sân ghép: Nếu sân lớn (cha) bị đặt → sân nhỏ (con) cũng bận, và ngược lại.</p>
+                        <div class="row g-3 align-items-end mb-4">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Ngày đá</label>
+                                <input type="date" class="form-control" id="input83Date">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Khung giờ</label>
+                                <select class="form-select" id="input83Slot">
+                                    <option value="17:00-18:30">17:00 - 18:30</option>
+                                    <option value="18:30-20:00">18:30 - 20:00</option>
+                                    <option value="20:00-21:30">20:00 - 21:30</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Loại sân</label>
+                                <select class="form-select" id="input83Type">
+                                    <option value="1">Sân 5 người</option>
+                                    <option value="2">Sân 7 người</option>
+                                    <option value="3">Sân 11 người</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-outline-primary w-100" style="border-color:#6f42c1;color:#6f42c1" onclick="findCourts()"><i class="fas fa-search me-1"></i> Tìm sân trống</button>
+                            </div>
+                        </div>
+                        <div id="result83" style="display:none">
+                            <h6 class="fw-bold"><i class="fas fa-futbol text-success"></i> Sân trống tìm thấy: <span id="result83Count" class="text-primary"></span></h6>
+                            <div class="row g-3" id="result83Cards"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 9 -->
+            <div class="tab-pane fade" id="tab9">
+                <div class="card section-card section-9 shadow-sm mb-4">
+                    <div class="card-header bg-white fw-bold"><i class="fas fa-bolt text-danger me-2"></i> 9. Triggers (Tự động kích hoạt)</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="card border-warning h-100">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold text-warning"><i class="fas fa-boxes me-1"></i> 9.1: Trừ kho tự động</h6>
+                                        <p class="small text-muted mb-1">Trigger: <code>trigger_deduct_stock</code></p>
+                                        <p class="small">Khi nhân viên thêm nước/đồ ăn vào ca đá → Kho tự động trừ số lượng. Nếu âm kho → hủy giao dịch.</p>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> ACTIVE (AFTER INSERT on session_used_items)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-danger h-100">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold text-danger"><i class="fas fa-clock me-1"></i> 9.2: Phạt trả sân trễ</h6>
+                                        <p class="small text-muted mb-1">Trigger: <code>trigger_calculate_late_fee</code></p>
+                                        <p class="small">Khi cập nhật giờ trả sân (return_time) → Tự động tính phút trễ và cộng phạt 1.000đ/phút vào tiền sân.</p>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> ACTIVE (BEFORE UPDATE on rental_sessions)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-primary h-100">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold text-primary"><i class="fas fa-ban me-1"></i> 9.3: Chống đặt trùng sân</h6>
+                                        <p class="small text-muted mb-1">Trigger: <code>trigger_prevent_overlap</code></p>
+                                        <p class="small">Khi tạo booking_court mới → Kiểm tra trùng sân (bao gồm sân ghép cha-con). Nếu trùng → RAISE EXCEPTION.</p>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> ACTIVE (BEFORE INSERT on booking_courts)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Court Mappings -->
+                <div class="card section-card section-9 shadow-sm">
+                    <div class="card-header bg-white fw-bold"><i class="fas fa-project-diagram text-danger me-2"></i> Quản lý Sân Ghép (Court Mappings)</div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Sân Cha (Sân lớn)</label>
+                                <select class="form-select" id="selParentCourt"><option value="">-- Chọn sân cha --</option></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Sân Con (Sân nhỏ)</label>
+                                <select class="form-select" id="selChildCourt"><option value="">-- Chọn sân con --</option></select>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-danger w-100" onclick="addMapping()"><i class="fas fa-link me-1"></i> Thêm liên kết</button>
+                            </div>
+                        </div>
+                        <table class="table table-bordered text-center table-sm">
+                            <thead class="table-light"><tr><th>ID</th><th>Sân Cha</th><th><i class="fas fa-arrow-right"></i></th><th>Sân Con</th><th>Thao tác</th></tr></thead>
+                            <tbody id="mappingTableBody"><tr><td colspan="5">Đang tải...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API = '../api/api_schedule.php';
+        const fmt = new Intl.NumberFormat('vi-VN');
+
+        // === INIT ===
+        document.addEventListener("DOMContentLoaded", () => {
+            const role = localStorage.getItem("userRole");
+            const name = localStorage.getItem("currentUser");
+            if (!role || !name) { alert("Bạn chưa đăng nhập!"); window.location.href = "index.html"; return; }
+
+            const ud = document.getElementById('currentUserDisplay');
+            ud.innerHTML = `<span class="badge ${role==='manager'?'bg-danger':'bg-primary'} me-3 p-2"><i class="fas ${role==='manager'?'fa-shield-alt':'fa-user'}"></i> ${role==='manager'?'QUẢN LÝ':'NHÂN VIÊN'}</span><span class="me-3"><i class="fas fa-user-tie"></i> <strong>${name}</strong></span>`;
+
+            if (role === 'staff') { const dm = document.getElementById('menu-dashboard'); if(dm) dm.style.display='none'; }
+
+            loadActiveBookings();
+            loadAllCourts();
+            loadMappings();
+        });
+
+        // === LOAD DATA ===
+        async function loadActiveBookings() {
+            try {
+                const res = await fetch(`${API}?action=active_bookings`);
+                const r = await res.json();
+                if (r.status !== 'success') return;
+
+                const opts = r.data.map(b => `<option value="${b.booking_id}">#BK-${b.booking_id} | ${b.customer_name} | ${b.court_name} | ${b.time_slot}</option>`).join('');
+                const def = '<option value="">-- Chọn booking --</option>';
+                document.getElementById('sel81Booking').innerHTML = def + opts;
+                document.getElementById('sel82Booking').innerHTML = def + opts;
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadAllCourts() {
+            try {
+                const res = await fetch(`${API}?action=get_all_courts`);
+                const r = await res.json();
+                if (r.status !== 'success') return;
+                const opts = r.data.map(c => `<option value="${c.id}">${c.name} (Loại ${c.court_type})</option>`).join('');
+                document.getElementById('selParentCourt').innerHTML = '<option value="">-- Chọn sân cha --</option>' + opts;
+                document.getElementById('selChildCourt').innerHTML = '<option value="">-- Chọn sân con --</option>' + opts;
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadMappings() {
+            try {
+                const res = await fetch(`${API}?action=get_court_mappings`);
+                const r = await res.json();
+                const tb = document.getElementById('mappingTableBody');
+                if (r.status !== 'success' || !r.data.length) { tb.innerHTML = '<tr><td colspan="5" class="text-muted">Chưa có liên kết sân ghép nào.</td></tr>'; return; }
+                tb.innerHTML = r.data.map(m => `<tr><td>${m.id}</td><td class="fw-bold text-primary">${m.parent_court_name}</td><td><i class="fas fa-arrow-right text-muted"></i></td><td>${m.child_court_name}</td><td><button class="btn btn-sm btn-outline-danger" onclick="deleteMapping(${m.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        // === 8.1: GENERATE SCHEDULE ===
+        async function generateSchedule() {
+            const bookingId = document.getElementById('sel81Booking').value;
+            const day = document.getElementById('sel81Day').value;
+            if (!bookingId) { alert('Vui lòng chọn Booking!'); return; }
+
+            try {
+                const res = await fetch(`${API}?action=generate_schedule`, {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ booking_id: parseInt(bookingId), day_of_week: parseInt(day) })
+                });
+                const r = await res.json();
+                if (r.status !== 'success') { alert('Lỗi: ' + r.message); return; }
+
+                document.getElementById('result81').style.display = 'block';
+                document.getElementById('result81Count').textContent = r.data.total_sessions;
+                document.getElementById('result81Body').innerHTML = r.data.sessions.map(s => `<tr><td>${s.session_id}</td><td>${s.play_date}</td><td>${s.court_name}</td><td>${s.time_slot}</td><td>${fmt.format(s.rent_amount)} đ</td><td><span class="badge ${s.payment_status==='paid'?'bg-success':'bg-warning'}">${s.payment_status}</span></td></tr>`).join('');
+                alert('Sinh lịch thành công! ' + r.data.total_sessions + ' ca đá đã được tạo.');
+            } catch(e) { alert('Lỗi kết nối: ' + e.message); }
+        }
+
+        // === 8.2: CONSOLIDATED INVOICE ===
+        async function loadSessions82() {
+            const bookingId = document.getElementById('sel82Booking').value;
+            const sel = document.getElementById('sel82Session');
+            if (!bookingId) { sel.innerHTML = '<option value="">-- Chọn booking trước --</option>'; return; }
+
+            try {
+                const res = await fetch(`${API}?action=booking_sessions&booking_id=${bookingId}`);
+                const r = await res.json();
+                if (r.status !== 'success' || !r.data.length) { sel.innerHTML = '<option value="">Không có ca đá nào</option>'; return; }
+                sel.innerHTML = '<option value="">-- Chọn ca đá --</option>' + r.data.map(s => `<option value="${s.session_id}">Ca #${s.session_id} | ${s.play_date} | ${s.court_name}</option>`).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function getInvoice() {
+            const sessionId = document.getElementById('sel82Session').value;
+            if (!sessionId) { alert('Vui lòng chọn ca đá!'); return; }
+
+            try {
+                const res = await fetch(`${API}?action=consolidated_invoice&session_id=${sessionId}`);
+                const r = await res.json();
+                if (r.status !== 'success') { alert('Lỗi: ' + r.message); return; }
+
+                document.getElementById('result82').style.display = 'block';
+                document.getElementById('inv_session_id').textContent = '#' + r.data.session_id;
+                document.getElementById('inv_rent').textContent = fmt.format(r.data.base_rent_amount) + ' đ';
+                document.getElementById('inv_service').textContent = fmt.format(r.data.total_service_amount) + ' đ';
+                document.getElementById('inv_total').textContent = fmt.format(r.data.grand_total) + ' đ';
+            } catch(e) { alert('Lỗi kết nối: ' + e.message); }
+        }
+
+        // === 8.3: FIND AVAILABLE COURTS ===
+        async function findCourts() {
+            const date = document.getElementById('input83Date').value;
+            const slot = document.getElementById('input83Slot').value;
+            const type = document.getElementById('input83Type').value;
+            if (!date) { alert('Vui lòng chọn ngày!'); return; }
+
+            try {
+                const res = await fetch(`${API}?action=find_available_courts&play_date=${date}&time_slot=${slot}&court_type=${type}`);
+                const r = await res.json();
+                if (r.status !== 'success') { alert('Lỗi: ' + r.message); return; }
+
+                document.getElementById('result83').style.display = 'block';
+                document.getElementById('result83Count').textContent = r.data.length + ' sân';
+                if (r.data.length === 0) {
+                    document.getElementById('result83Cards').innerHTML = '<div class="col-12"><div class="alert alert-warning">Không tìm thấy sân trống nào cho khung giờ này.</div></div>';
+                } else {
+                    document.getElementById('result83Cards').innerHTML = r.data.map(c => `<div class="col-md-3"><div class="card border-success"><div class="card-body text-center"><h5 class="text-success"><i class="fas fa-futbol"></i> ${c.court_name}</h5><span class="badge bg-success">Trống</span></div></div></div>`).join('');
+                }
+            } catch(e) { alert('Lỗi kết nối: ' + e.message); }
+        }
+
+        // === COURT MAPPINGS ===
+        async function addMapping() {
+            const parentId = document.getElementById('selParentCourt').value;
+            const childId = document.getElementById('selChildCourt').value;
+            if (!parentId || !childId) { alert('Vui lòng chọn cả sân cha và sân con!'); return; }
+
+            try {
+                const res = await fetch(`${API}?action=add_court_mapping`, {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ parent_court_id: parseInt(parentId), child_court_id: parseInt(childId) })
+                });
+                const r = await res.json();
+                if (r.status === 'success') { alert('Thêm liên kết thành công!'); loadMappings(); }
+                else { alert('Lỗi: ' + r.message); }
+            } catch(e) { alert('Lỗi: ' + e.message); }
+        }
+
+        async function deleteMapping(id) {
+            if (!confirm('Xác nhận xóa liên kết sân ghép này?')) return;
+            try {
+                const res = await fetch(`${API}?action=delete_court_mapping`, {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ mapping_id: id })
+                });
+                const r = await res.json();
+                if (r.status === 'success') { alert('Đã xóa!'); loadMappings(); }
+                else { alert('Lỗi: ' + r.message); }
+            } catch(e) { alert('Lỗi: ' + e.message); }
+        }
+
+        function handleLogout() {
+            if(confirm("Bạn có chắc chắn muốn đăng xuất?")) { localStorage.clear(); window.location.href = "index.html"; }
+        }
+    </script>
+</body>
+</html>
