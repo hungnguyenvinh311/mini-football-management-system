@@ -47,7 +47,7 @@ SELECT sui.id AS item_id,
        bc.booking_id,
        p.id AS product_id,
        p.code AS product_code,
-       p.name AS product_name,
+       p.tensp AS product_name,
        sui.quantity,
        sui.unit_price,
        sui.total_amount

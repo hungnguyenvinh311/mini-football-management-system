@@ -62,7 +62,7 @@ CREATE TABLE rental_sessions (
 CREATE TABLE products (
     id SERIAL PRIMARY KEY,
     code VARCHAR(20) UNIQUE NOT NULL,
-    name VARCHAR(100) NOT NULL,
+    tensp VARCHAR(100) NOT NULL,
     stock_qty INT DEFAULT 0,
     unit_price DECIMAL(12,2) DEFAULT 0
 );
@@ -116,7 +116,7 @@ SELECT sui.id AS item_id,
        bc.booking_id,
        p.id AS product_id,
        p.code AS product_code,
-       p.name AS product_name,
+       p.tensp AS product_name,
        sui.quantity,
        sui.unit_price,
        sui.total_amount

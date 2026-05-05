@@ -326,8 +326,8 @@
                     const li = document.createElement('li');
                     li.className = 'list-group-item list-group-item-action cursor-pointer';
                     const displayPrice = item.unit_price ? item.unit_price.toLocaleString() + ' đ' : '0 đ';
-                    li.textContent = `${item.name} - ${displayPrice} - ${item.stock_qty} hiện có`;
-                    li.onclick = () => selectItem(item.id, item.name, item.unit_price || 0);
+                    li.textContent = `${item.tensp} - ${displayPrice} - ${item.stock_qty} hiện có`;
+                    li.onclick = () => selectItem(item.id, item.tensp, item.unit_price || 0);
                     results.appendChild(li);
                 });
             } catch (error) {
@@ -336,10 +336,10 @@
         }
 
         // Chọn 1 mặt hàng -> Hiện form nhập số lượng/giá
-        function selectItem(id, name, price) {
-            currentItem = { id, name };
+        function selectItem(id, tensp, price) {
+            currentItem = { id, tensp };
             document.getElementById('itemInputInterface').classList.remove('d-none');
-            document.getElementById('selectedItemName').innerText = name;
+            document.getElementById('selectedItemName').innerText = tensp;
             document.getElementById('selectedItemPrice').value = price;
             document.getElementById('selectedItemQty').value = 1; // Reset về 1
         }
@@ -356,7 +356,7 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="text-start">
-                    ${currentItem.name}
+                    ${currentItem.tensp}
                     <input type="hidden" name="item_id[]" value="${currentItem.id}">
                 </td>
                 <td>

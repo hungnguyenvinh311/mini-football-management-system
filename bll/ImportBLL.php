@@ -52,19 +52,19 @@ class ImportBLL {
     }
 
     public function addNewProduct($data) {
-        if (empty($data['name'])) {
+        if (empty($data['tensp'])) {
             throw new Exception("Product name is required.");
         }
         $code = 'PROD' . time();
-        $name = $data['name'];
+        $tensp = $data['tensp'];
 
-        $newProductId = $this->productDAL->createProduct($code, $name);
+        $newProductId = $this->productDAL->createProduct($code, $tensp);
         
         if ($newProductId) {
             return [
                 'id' => $newProductId,
                 'code' => $code,
-                'name' => $name
+                'tensp' => $tensp
             ];
         }
         return null;

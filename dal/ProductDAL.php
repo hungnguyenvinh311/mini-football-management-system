@@ -4,16 +4,16 @@ class ProductDAL {
     public function __construct($db) { $this->conn = $db; }
 
     public function searchByName($keyword) {
-        $query = "SELECT id, code, name, stock_qty, unit_price FROM products WHERE UPPER(name) LIKE UPPER(:keyword)";
+        $query = "SELECT id, code, tensp, stock_qty, unit_price FROM products WHERE UPPER(tensp) LIKE UPPER(:keyword)";
         $stmt = $this->conn->prepare($query);
         $stmt->execute(['keyword' => "%$keyword%"]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function createProduct($code, $name) {
-        $query = "INSERT INTO products (code, name, stock_qty) VALUES (:code, :name, 0)";
+    public function createProduct($code, $tensp) {
+        $query = "INSERT INTO products (code, tensp, stock_qty) VALUES (:code, :tensp, 0)";
         $stmt = $this->conn->prepare($query);
-        if ($stmt->execute(['code' => $code, 'name' => $name])) {
+        if ($stmt->execute(['code' => $code, 'tensp' => $tensp])) {
             return $this->conn->lastInsertId();
         }
         return false;
