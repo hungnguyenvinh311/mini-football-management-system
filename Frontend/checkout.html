@@ -393,11 +393,17 @@
             const { customer, booking, rental_sessions, used_items } = currentInvoiceData;
             const invoiceBox = document.getElementById('step-4-invoice');
 
-            // Header
-            invoiceBox.querySelector('.text-primary').textContent = customer.name;
-            invoiceBox.querySelector('p.text-muted:nth-of-type(2)').textContent = `SĐT: ${customer.phone}`;
-            invoiceBox.querySelector('.mb-0.text-muted strong').textContent = `#INV-${booking.id}-${Date.now()}`;
-            invoiceBox.querySelector('.mb-0.text-muted:nth-of-type(2)').textContent = `Ngày xuất: ${new Date().toLocaleDateString()}`;
+            // Header - Use more specific selectors by targeting the first row's cells
+            const headerRow = invoiceBox.querySelector('.row.mb-4.border-bottom');
+            const customerNameCell = headerRow.querySelector('.col-sm-6.text-end .text-primary');
+            const customerPhoneCell = headerRow.querySelectorAll('.col-sm-6.text-end .text-muted')[0];
+            const invoiceIdCell = headerRow.querySelector('strong.text-dark');
+            const invoiceDateCell = headerRow.querySelectorAll('p.text-muted')[1];
+
+            if (customerNameCell) customerNameCell.textContent = customer.name;
+            if (customerPhoneCell) customerPhoneCell.textContent = `SĐT: ${customer.phone}`;
+            if (invoiceIdCell) invoiceIdCell.textContent = `#INV-${booking.id}-${Date.now()}`;
+            if (invoiceDateCell) invoiceDateCell.textContent = `Ngày xuất: ${new Date().toLocaleDateString()}`;
 
             // Rental sessions
             const rentalBody = invoiceBox.querySelector('table:nth-of-type(1) tbody');
@@ -427,19 +433,23 @@
 
             // Used items
             const itemsBody = document.getElementById('invoiceItemsBody');
-            itemsBody.innerHTML = used_items.map(item => `
+            itemsBody.innerHTML = used_items.map(item => {
+                const sessionData = rental_sessions.find(s => s.session_id === item.session_id);
+                const sessionDate = sessionData ? new Date(sessionData.play_date).toLocaleDateString() : 'N/A';
+                
+                return `
              <tr data-item-id="${item.item_id}" data-product-id="${item.product_id}">
-                <td>${item.product_code}</td>
-                <td>${item.product_name}</td>
-                <td>${new Date(rental_sessions.find(s => s.session_id === item.session_id)?.play_date).toLocaleDateString()}</td>
+                <td>${item.product_code || ''}</td>
+                <td>${item.product_name || ''}</td>
+                <td>${sessionDate}</td>
                 <td class="item-price" data-price="${item.unit_price}">${formatter.format(item.unit_price)}</td>
                 <td>
                     <input type="number" class="form-control form-control-sm qty-input mx-auto" value="${item.quantity}" min="0" onchange="recalculateInvoice()">
                 </td>
                 <td class="item-subtotal">${formatter.format(item.total_amount)}</td>
                 <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeInvoiceItem(this)"><i class="fas fa-times"></i></button></td>
-            </tr>
-        `).join('');
+            </tr>`;
+            }).join('');
 
             // Deposit
             invoiceBox.querySelector('#depositAmount').value = booking.deposit_amount;

@@ -105,57 +105,28 @@ if ($action === 'search_items' && $_SERVER['REQUEST_METHOD'] === 'GET') {
 // ==========================================
 // 2d. ENDPOINT: TẠO HOẶC CẬP NHẬT PHIÊN THUÊ
 // ==========================================
-if ($action === 'create_rental_session') {
+// Sửa lại dòng này để nhận cả 2 tên action cho chắc
+if ($action === 'create_rental_session' || $action === 'update_session') {
     $rawInput = file_get_contents("php://input");
     $data = json_decode($rawInput, true);
-    if (!is_array($data)) {
-        $data = [];
-    }
+    
+    // Đảm bảo lấy được play_date từ JSON hoặc Request
+    $playDate = $data['play_date'] ?? $_REQUEST['play_date'] ?? null;
+    $bookingCourtId = $data['booking_court_id'] ?? $_REQUEST['booking_court_id'] ?? null;
 
-    // Fallback khi body JSON không có hoặc request bị gửi dưới dạng GET/POST form data
-    $fallbackFields = ['booking_court_id', 'play_date', 'reception_time', 'return_time', 'rent_amount'];
-    foreach ($fallbackFields as $field) {
-        if (!isset($data[$field]) || $data[$field] === null || $data[$field] === '') {
-            if (isset($_REQUEST[$field])) {
-                $data[$field] = $_REQUEST[$field];
-            }
-        }
-    }
-
-    // Dùng fallback với used_items nếu có
-    if (!isset($data['used_items']) || $data['used_items'] === null) {
-        if (isset($_REQUEST['used_items'])) {
-            $decodedItems = json_decode($_REQUEST['used_items'], true);
-            $data['used_items'] = is_array($decodedItems) ? $decodedItems : [];
-        }
-    }
-
-    $required = ['booking_court_id', 'play_date', 'reception_time', 'return_time', 'rent_amount'];
-    foreach ($required as $f) {
-        $value = $data[$f] ?? null;
-        if ($value === null || $value === '') {
-            echo json_encode([
-                "status" => "error",
-                "message" => "Thiếu dữ liệu: $f",
-                "debug" => [
-                    "raw_input" => $rawInput,
-                    "json_error" => json_last_error_msg(),
-                    "parsed_data" => $data,
-                    "request_keys" => array_keys($_REQUEST)
-                ]
-            ]);
-            exit();
-        }
+    if (!$playDate || !$bookingCourtId) {
+        echo json_encode(["status" => "error", "message" => "Thiếu booking_court_id hoặc play_date"]);
+        exit();
     }
 
     $sessionBLL = new RentalSessionBLL($db);
     $result = $sessionBLL->createRentalSession(
-        $data['booking_court_id'],
-        $data['play_date'],
-        $data['reception_time'],
-        $data['return_time'],
-        $data['rent_amount'],
-        isset($data['used_items']) ? $data['used_items'] : []
+        $bookingCourtId,
+        $playDate, // Truyền ngày cụ thể vào đây
+        $data['reception_time'] ?? $_REQUEST['reception_time'],
+        $data['return_time'] ?? $_REQUEST['return_time'],
+        $data['rent_amount'] ?? $_REQUEST['rent_amount'],
+        $data['used_items'] ?? []
     );
 
     echo json_encode($result);

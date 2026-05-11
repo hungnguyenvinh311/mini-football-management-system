@@ -4,6 +4,13 @@ class RentalSessionDAL {
 
     public function __construct($db) { $this->conn = $db; }
 
+    public function getSessionByCourtAndDate($bookingCourtId, $playDate) {
+    // Tìm đúng ca đá của sân đó VÀ ngày đó
+    $query = "SELECT id FROM rental_sessions WHERE booking_court_id = :id AND play_date = :date LIMIT 1";
+    $stmt = $this->conn->prepare($query);
+    $stmt->execute(['id' => $bookingCourtId, 'date' => $playDate]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
     // 1. HÀM MỚI: Tìm xem ca đá này đã tồn tại trong DB chưa
     public function getSessionByBookingCourtId($bookingCourtId) {
         $query = "SELECT id FROM rental_sessions WHERE booking_court_id = :id LIMIT 1";

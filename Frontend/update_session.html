@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,34 +8,76 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #f4f6f9; overflow-x: hidden; }
-        .sidebar { height: 100vh; background-color: #343a40; color: white; position: fixed; width: 250px; }
-        .sidebar a { color: #c2c7d0; text-decoration: none; padding: 15px 20px; display: block; transition: 0.3s; }
-        .sidebar a:hover, .sidebar a.active { background-color: #494e53; color: white; border-left: 4px solid #007bff; }
-        .main-content { margin-left: 250px; padding: 20px; }
-        
+        body {
+            background-color: #f4f6f9;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            position: fixed;
+            width: 250px;
+        }
+
+        .sidebar a {
+            color: #c2c7d0;
+            text-decoration: none;
+            padding: 15px 20px;
+            display: block;
+            transition: 0.3s;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background-color: #494e53;
+            color: white;
+            border-left: 4px solid #007bff;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
         /* Ẩn các khối chưa cần thiết ban đầu */
-        #step-2-customer-list, #step-3-bookings, #step-4-session-detail { display: none; }
-        
-        .cursor-pointer { cursor: pointer; }
-        .hover-bg-light:hover { background-color: #f8f9fa; }
-        .table-items th { background-color: #e9ecef; }
+        #step-2-customer-list,
+        #step-3-bookings,
+        #step-4-session-detail {
+            display: none;
+        }
+
+        .cursor-pointer {
+            cursor: pointer;
+        }
+
+        .hover-bg-light:hover {
+            background-color: #f8f9fa;
+        }
+
+        .table-items th {
+            background-color: #e9ecef;
+        }
     </style>
 </head>
+
 <body>
 
-    
+
     <div class="sidebar d-print-none">
         <h4 class="text-center py-4 border-bottom border-secondary">MiniPitch Admin</h4>
-        
-        <a href="dashboard.html" id="menu-dashboard"><i class="fas fa-tachometer-alt me-2"></i> Tổng quan (Dashboard)</a>
-        
+
+        <a href="dashboard.html" id="menu-dashboard"><i class="fas fa-tachometer-alt me-2"></i> Tổng quan
+            (Dashboard)</a>
+
         <a href="booking.html"><i class="fas fa-calendar-check me-2"></i> Đặt sân (Booking)</a>
         <a href="update_session.html"><i class="fas fa-hamburger me-2"></i> Cập nhật dịch vụ</a>
         <a href="checkout.html"><i class="fas fa-file-invoice-dollar me-2"></i> Thanh toán</a>
         <a href="import_goods.html"><i class="fas fa-boxes me-2"></i> Nhập kho</a>
-        
-        <a href="#" onclick="handleLogout()" class="mt-5 text-danger"><i class="fas fa-sign-out-alt me-2"></i> Đăng xuất</a>
+
+        <a href="#" onclick="handleLogout()" class="mt-5 text-danger"><i class="fas fa-sign-out-alt me-2"></i> Đăng
+            xuất</a>
     </div>
     <div class="main-content">
         <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
@@ -43,7 +86,7 @@
                 <span class="me-3"><i class="fas fa-user-circle"></i> Nhân viên: <strong>Nguyễn Văn A</strong></span>
             </div> -->
             <div id="currentUserDisplay">
-                </div>
+            </div>
         </div>
 
         <div class="card shadow-sm mb-4" id="step-1-search">
@@ -52,10 +95,12 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-md-6">
                         <label class="form-label">Tên khách hàng hoặc Số điện thoại</label>
-                        <input type="text" class="form-control" id="searchCustomerInput" placeholder="Nhập tên khách hàng...">
+                        <input type="text" class="form-control" id="searchCustomerInput"
+                            placeholder="Nhập tên khách hàng...">
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-primary w-100" onclick="searchCustomer()"><i class="fas fa-search"></i> Tìm kiếm</button>
+                        <button class="btn btn-primary w-100" onclick="searchCustomer()"><i class="fas fa-search"></i>
+                            Tìm kiếm</button>
                     </div>
                 </div>
             </div>
@@ -66,7 +111,7 @@
                 <div class="card shadow-sm mb-4">
                     <div class="card-header bg-white fw-bold">2. Chọn Khách hàng</div>
                     <ul class="list-group list-group-flush" id="customerList">
-                        </ul>
+                    </ul>
                 </div>
             </div>
 
@@ -85,7 +130,7 @@
                                 </tr>
                             </thead>
                             <tbody id="bookingList">
-                                </tbody>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -94,13 +139,14 @@
 
         <div class="card shadow-lg mb-5 border-success" id="step-4-session-detail">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h5 class="m-0"><i class="fas fa-clipboard-list"></i> Cập nhật chi tiết Ca đá: <span id="displaySessionId">#BK-1001</span></h5>
+                <h5 class="m-0"><i class="fas fa-clipboard-list"></i> Cập nhật chi tiết Ca đá: <span
+                        id="displaySessionId">#BK-1001</span></h5>
                 <button class="btn btn-sm btn-light" onclick="closeSessionDetail()">Đóng</button>
             </div>
             <div class="card-body">
                 <form id="updateSessionForm">
                     <input type="hidden" name="booking_court_id" id="formBookingCourtId">
-                    
+
                     <div class="row mb-4">
                         <div class="col-md-4">
                             <label class="form-label fw-bold">Ngày đá</label>
@@ -118,7 +164,8 @@
                         <div class="col-md-4">
                             <label class="form-label fw-bold">Tiền sân (Bao gồm phụ phí)</label>
                             <div class="input-group">
-                                <input type="number" class="form-control text-end" name="rent_amount" id="rentAmount" value="450000" onchange="calculateTotal()">
+                                <input type="number" class="form-control text-end" name="rent_amount" id="rentAmount"
+                                    value="450000" onchange="calculateTotal()">
                                 <span class="input-group-text">VNĐ</span>
                             </div>
                         </div>
@@ -128,7 +175,8 @@
 
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold mb-0">Danh sách nước uống / Dịch vụ sử dụng</h6>
-                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#searchItemModal">
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#searchItemModal">
                             <i class="fas fa-plus"></i> Thêm mặt hàng (More items used)
                         </button>
                     </div>
@@ -144,7 +192,7 @@
                             </tr>
                         </thead>
                         <tbody id="usedItemsTableBody">
-                            </tbody>
+                        </tbody>
                         <tfoot>
                             <tr>
                                 <td colspan="3" class="text-end fw-bold">Tổng tiền dịch vụ:</td>
@@ -155,7 +203,8 @@
                     </table>
 
                     <div class="alert alert-warning text-end mt-4">
-                        <h4 class="mb-0">TỔNG CỘNG CA ĐÁ: <span id="grandTotalDisplay" class="text-danger fw-bold">450,000 VNĐ</span></h4>
+                        <h4 class="mb-0">TỔNG CỘNG CA ĐÁ: <span id="grandTotalDisplay"
+                                class="text-danger fw-bold">450,000 VNĐ</span></h4>
                         <small>(Tiền sân + Tiền dịch vụ)</small>
                     </div>
 
@@ -168,7 +217,8 @@
             </div>
         </div>
 
-    </div> <div class="modal fade" id="searchItemModal" tabindex="-1">
+    </div>
+    <div class="modal fade" id="searchItemModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-light">
@@ -177,12 +227,14 @@
                 </div>
                 <div class="modal-body">
                     <div class="input-group mb-3">
-                        <input type="text" class="form-control" id="itemSearchKeyword" placeholder="Nhập tên nước uống (VD: Sting, Aquafina)...">
-                        <button class="btn btn-primary" onclick="searchItems()"><i class="fas fa-search"></i> Tìm</button>
+                        <input type="text" class="form-control" id="itemSearchKeyword"
+                            placeholder="Nhập tên nước uống (VD: Sting, Aquafina)...">
+                        <button class="btn btn-primary" onclick="searchItems()"><i class="fas fa-search"></i>
+                            Tìm</button>
                     </div>
-                    
+
                     <ul class="list-group mb-3" id="itemSearchResults">
-                        </ul>
+                    </ul>
 
                     <div class="bg-light p-3 rounded border d-none" id="itemInputInterface">
                         <h6 id="selectedItemName" class="text-primary fw-bold">Sting Dâu</h6>
@@ -193,10 +245,12 @@
                             </div>
                             <div class="col-4">
                                 <label class="form-label small">Số lượng</label>
-                                <input type="number" class="form-control form-control-sm" id="selectedItemQty" value="1" min="1">
+                                <input type="number" class="form-control form-control-sm" id="selectedItemQty" value="1"
+                                    min="1">
                             </div>
                             <div class="col-3 mt-4">
-                                <button type="button" class="btn btn-success btn-sm w-100" onclick="confirmAddItem()">Xác nhận</button>
+                                <button type="button" class="btn btn-success btn-sm w-100"
+                                    onclick="confirmAddItem()">Xác nhận</button>
                             </div>
                         </div>
                     </div>
@@ -206,7 +260,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         // 1. TÌM KHÁCH HÀNG
         async function searchCustomer() {
@@ -219,7 +273,7 @@
             const response = await fetch(`../api/api_booking.php?action=search_customers&keyword=${encodeURIComponent(keyword)}`);
             const result = await response.json();
             if (result.status !== 'success') {
-                alert('Lỗi tìm khách hàng: ' + (result.message || '')); 
+                alert('Lỗi tìm khách hàng: ' + (result.message || ''));
                 return;
             }
 
@@ -271,26 +325,31 @@
             result.data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>#${item.booking_id}</strong></td>
-                    <td>${item.court_name}</td>
-                    <td>${item.time_slot}</td>
-                    <td>${item.start_date}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="openSessionDetail(${item.booking_court_id}, '${item.booking_id}', '${item.court_name}', '${item.time_slot}')">Nhận/Trả sân</button>
-                    </td>
-                `;
+        <td><strong>#BK-${item.booking_id}</strong></td>
+        <td>${item.court_name}</td>
+        <td>${item.time_slot}</td>
+        <td><span class="badge bg-info">${item.play_date}</span></td> <td>
+            <button class="btn btn-sm btn-outline-primary" 
+                onclick="openSessionDetail(${item.booking_court_id}, '${item.booking_id}', '${item.court_name}', '${item.time_slot}', '${item.play_date}')">
+                Nhận/Trả sân
+            </button>
+        </td>
+    `;
                 tbody.appendChild(tr);
             });
         }
 
         // 3. MỞ GIAO DIỆN NHẬP CHI TIẾT CA ĐÁ
-        function openSessionDetail(bookingCourtId, bookingId, courtName, timeSlot) {
+        function openSessionDetail(bookingCourtId, bookingId, courtName, timeSlot, playDate) {
             document.getElementById('step-4-session-detail').style.display = 'block';
             document.getElementById('displaySessionId').innerText = "#" + bookingId + ' (' + courtName + ' - ' + timeSlot + ')';
             document.getElementById('formBookingCourtId').value = bookingCourtId;
 
-            // Mặc định ngày hiện tại khi mở form
-            document.getElementById('playDate').value = new Date().toISOString().slice(0, 10);
+            // Sử dụng ngày ca đá thực tế được truyền vào, không phải ngày hôm nay
+            document.getElementById('playDate').value = playDate || new Date().toISOString().slice(0, 10);
+
+            // XÓA SẠCH CÁC MẬT HÀNG CŨ TỪ CA ĐÁ TRƯỚC ĐÓ
+            document.getElementById('usedItemsTableBody').innerHTML = '';
 
             document.getElementById('step-4-session-detail').scrollIntoView({ behavior: 'smooth' });
             calculateTotal(); // Tính toán lần đầu
@@ -351,7 +410,7 @@
             const subtotal = price * qty;
 
             const tbody = document.getElementById('usedItemsTableBody');
-            
+
             // Mảng hidden input chuẩn bị cho PHP POST (name="item_id[]")
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -395,7 +454,7 @@
         function calculateTotal() {
             // Lấy tiền sân
             let rent = parseInt(document.getElementById('rentAmount').value) || 0;
-            
+
             // Tính tổng tiền nước/dịch vụ
             let itemsTotal = 0;
             document.querySelectorAll('.item-subtotal').forEach(td => {
@@ -509,7 +568,7 @@
 
         // 5. HÀM ĐĂNG XUẤT CHUNG
         function handleLogout() {
-            if(confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?")) {
+            if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?")) {
                 localStorage.removeItem("currentUser");
                 localStorage.removeItem("userRole");
                 window.location.href = "index.html";
@@ -528,7 +587,7 @@
         if (role === 'staff') {
             // Hãy thêm class 'menu-dashboard' vào thẻ <a> Dashboard ở sidebar của các file HTML
             const dashMenu = document.querySelector('.menu-dashboard');
-            if(dashMenu) dashMenu.style.display = 'none';
+            if (dashMenu) dashMenu.style.display = 'none';
         }
     </script>
 </body>
