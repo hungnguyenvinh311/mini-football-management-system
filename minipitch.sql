@@ -91,7 +91,6 @@ SELECT b.id AS booking_id,
        b.total_expected_amount,
        b.deposit_amount,
        b.status,
-       -- Đoạn này để lôi tên các sân ra nè
        (SELECT STRING_AGG(cr.name, ', ') 
         FROM booking_courts bc 
         JOIN courts cr ON bc.court_id = cr.id 
