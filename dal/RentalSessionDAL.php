@@ -4,7 +4,41 @@ class RentalSessionDAL {
 
     public function __construct($db) { $this->conn = $db; }
 
-    // Tạo ca đá mới khi khách nhận sân, thêm dịch vụ cùng lúc bằng stored procedure
+    // 1. HÀM MỚI: Tìm xem ca đá này đã tồn tại trong DB chưa
+    public function getSessionByBookingCourtId($bookingCourtId) {
+        $query = "SELECT id FROM rental_sessions WHERE booking_court_id = :id LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute(['id' => $bookingCourtId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // 2. HÀM MỚI: Cập nhật thông tin ca đá nếu đã có sẵn
+    public function updateSession($id, $playDate, $receptionTime, $returnTime, $rentAmount) {
+        $query = "UPDATE rental_sessions 
+                  SET play_date = :d, 
+                      reception_time = :rec, 
+                      return_time = :ret, 
+                      rent_amount = :amt 
+                  WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([
+            'd'   => $playDate,
+            'rec' => $receptionTime,
+            'ret' => $returnTime,
+            'amt' => $rentAmount,
+            'id'  => $id
+        ]);
+    }
+
+    // 3. HÀM MỚI: Xóa trắng danh sách nước uống cũ để chèn lại cái mới (tránh trùng lặp)
+    public function clearOldItems($sessionId) {
+        $query = "DELETE FROM session_used_items WHERE session_id = :id";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute(['id' => $sessionId]);
+    }
+
+    // --- GIỮ NGUYÊN CÁC HÀM CŨ CỦA BẠN ---
+
     public function createSessionWithItems($bookingCourtId, $playDate, $receptionTime, $returnTime, $rentAmount, $usedItemsJson) {
         $query = "CALL sp_create_rental_session(
             CAST(:bc_id AS INT),
@@ -25,12 +59,10 @@ class RentalSessionDAL {
             'used_items' => $usedItemsJson
         ]);
 
-        // Stored procedure returns OUT parameter as result row
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result ? $result['o_session_id'] : false;
     }
 
-    // Cập nhật giờ trả sân và tiền sân (có thể tăng do trễ giờ)
     public function updateCheckout($sessionId, $returnTime, $rentAmount) {
         $query = "UPDATE rental_sessions SET return_time = :return_time, rent_amount = :rent_amount 
                   WHERE id = :id";
@@ -38,7 +70,6 @@ class RentalSessionDAL {
         return $stmt->execute(['return_time' => $returnTime, 'rent_amount' => $rentAmount, 'id' => $sessionId]);
     }
 
-    // Thêm dịch vụ (Nước/Đồ ăn) khách dùng trong ca
     public function addUsedItem($sessionId, $productId, $unitPrice, $quantity, $totalAmount) {
         $query = "INSERT INTO session_used_items (session_id, product_id, unit_price, quantity, total_amount) 
                   VALUES (:session_id, :product_id, :price, :qty, :total)";

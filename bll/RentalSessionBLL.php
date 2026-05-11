@@ -5,57 +5,74 @@ require_once '../dal/ProductDAL.php';
 class RentalSessionBLL {
     private $db;
     private $rentalSessionDAL;
-    private $productDAL;
 
     public function __construct($db) {
         $this->db = $db;
         $this->rentalSessionDAL = new RentalSessionDAL($db);
-        $this->productDAL = new ProductDAL($db);
     }
 
     public function createRentalSession($bookingCourtId, $playDate, $receptionTime, $returnTime, $rentAmount, $usedItems = []) {
         try {
             $this->db->beginTransaction();
 
-            $usedItemsJson = !empty($usedItems) ? json_encode($usedItems) : null;
-            $sessionId = $this->rentalSessionDAL->createSessionWithItems(
-                $bookingCourtId,
-                $playDate,
-                $receptionTime,
-                $returnTime,
-                $rentAmount,
-                $usedItemsJson
-            );
+            // 1. Kiểm tra session hiện có
+            $existingSession = $this->rentalSessionDAL->getSessionByBookingCourtId($bookingCourtId);
+            $sessionId = null;
 
-            if (!$sessionId) {
-                throw new Exception('Không tạo được phiên thuê.');
+            if ($existingSession) {
+                $sessionId = $existingSession['id'];
+                // Cập nhật thông tin ca đá hiện tại
+                $this->rentalSessionDAL->updateSession($sessionId, $playDate, $receptionTime, $returnTime, $rentAmount);
+            } else {
+                // Nếu chưa có, tạo mới ca đá (Truyền NULL cho used_items để PHP xử lý bên dưới)
+                $sessionId = $this->rentalSessionDAL->createSessionWithItems(
+                    $bookingCourtId, $playDate, $receptionTime, $returnTime, $rentAmount, null 
+                );
             }
 
+            if (!$sessionId) {
+                throw new Exception('Không xử lý được phiên thuê.');
+            }
+
+            // 2. XÓA SẠCH đồ cũ của Session này trước khi chèn mới (Dù cũ hay mới đều xóa cho chắc)
+            $this->rentalSessionDAL->clearOldItems($sessionId);
+
+            // 3. CHÈN ĐỒ ĂN/NƯỚC UỐNG VÀO DATABASE
             $totalService = 0;
-            foreach ($usedItems as $item) {
-                if (empty($item['product_id']) || empty($item['unit_price']) || empty($item['quantity'])) {
-                    continue;
+            if (!empty($usedItems) && is_array($usedItems)) {
+                foreach ($usedItems as $item) {
+                    if (empty($item['product_id']) || empty($item['quantity'])) continue;
+
+                    $unitPrice = (float)$item['unit_price'];
+                    $qty = (int)$item['quantity'];
+                    $itemTotal = $unitPrice * $qty;
+                    $totalService += $itemTotal;
+
+                    // Lưu vào bảng session_used_items
+                    $this->rentalSessionDAL->addUsedItem(
+                        $sessionId, 
+                        $item['product_id'], 
+                        $unitPrice, 
+                        $qty, 
+                        $itemTotal
+                    );
                 }
-                $totalService += $item['unit_price'] * $item['quantity'];
             }
 
             $this->db->commit();
 
             return [
                 'status' => 'success',
-                'message' => 'Cập nhật phiên đá và hàng hóa thành công.',
+                'message' => 'Đã cập nhật dịch vụ thành công!',
                 'data' => [
                     'session_id' => $sessionId,
-                    'total_service' => $totalService,
-                    'rent_amount' => $rentAmount,
-                    'grand_total' => $rentAmount + $totalService
+                    'grand_total' => (float)$rentAmount + $totalService
                 ]
             ];
 
         } catch (Exception $e) {
             $this->db->rollBack();
-            return ['status' => 'error', 'message' => 'Lỗi hệ thống: ' . $e->getMessage()];
+            return ['status' => 'error', 'message' => 'Lỗi: ' . $e->getMessage()];
         }
     }
 }
-?>

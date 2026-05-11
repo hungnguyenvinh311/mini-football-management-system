@@ -26,68 +26,75 @@ class PaymentBLL {
         return ["status" => "success", "data" => $invoiceData];
     }
 
-    public function confirmPayment($data) {
-        try {
-            $this->db->beginTransaction();
+    // File: bll/PaymentBLL.php
 
-            $bookingId = $data['booking_id'];
-            $userId = $data['user_id'];
-            $finalItems = $data['items'];
-            // Các biến tính toán bên giao diện gửi lên (totalRental, totalItems, deposit, finalAmount) 
-            // có thể giữ lại để ghi log hoặc đối chiếu sau này nếu cần thiết.
+public function confirmPayment($data) {
+    try {
+        $this->db->beginTransaction();
 
-            $originalInvoice = $this->paymentDAL->getInvoiceDetails($bookingId);
-            if (!$originalInvoice) {
-                throw new Exception("Booking không tồn tại.");
-            }
-            $originalItems = $originalInvoice['used_items'];
+        $bookingId = $data['booking_id'];
+        $userId = $data['user_id'];
+        $finalItems = $data['items'];
 
-            // 1. CẬP NHẬT LẠI SỐ LƯỢNG ĐỒ UỐNG TRƯỚC (NẾU KHÁCH TRẢ LẠI)
-            $originalItemsMap = [];
-            foreach ($originalItems as $item) {
-                $originalItemsMap[$item['item_id']] = $item;
-            }
+        // --- BƯỚC MỚI: LẤY TỔNG TIỀN THỰC TẾ TỪ DỮ LIỆU GỬI LÊN ---
+        // Tổng tiền thực tế = Tiền sân + Tiền dịch vụ
+        $totalRental = (float)$data['total_rental'];
+        $totalItems = (float)$data['total_items'];
+        $grandTotal = $totalRental + $totalItems; 
+        // ------------------------------------------------------
 
-            $finalItemsMap = [];
-            if (is_array($finalItems)) {
-                foreach ($finalItems as $item) {
-                    $finalItemsMap[$item['id']] = $item;
-                    if (isset($originalItemsMap[$item['id']])) {
-                        $originalItem = $originalItemsMap[$item['id']];
-                        if ($originalItem['quantity'] != $item['quantity']) {
-                            $newTotal = $item['unit_price'] * $item['quantity'];
-                            $this->paymentDAL->updateSessionUsedItemQuantity($item['id'], $item['quantity'], $newTotal);
-                        }
+        $originalInvoice = $this->paymentDAL->getInvoiceDetails($bookingId);
+        if (!$originalInvoice) {
+            throw new Exception("Booking không tồn tại.");
+        }
+        $originalItems = $originalInvoice['used_items'];
+
+        // 1. CẬP NHẬT LẠI SỐ LƯỢNG ĐỒ UỐNG (Giữ nguyên logic của bạn)
+        $originalItemsMap = [];
+        foreach ($originalItems as $item) {
+            $originalItemsMap[$item['item_id']] = $item;
+        }
+
+        $finalItemsMap = [];
+        if (is_array($finalItems)) {
+            foreach ($finalItems as $item) {
+                $finalItemsMap[$item['id']] = $item;
+                if (isset($originalItemsMap[$item['id']])) {
+                    $originalItem = $originalItemsMap[$item['id']];
+                    if ($originalItem['quantity'] != $item['quantity']) {
+                        $newTotal = $item['unit_price'] * $item['quantity'];
+                        $this->paymentDAL->updateSessionUsedItemQuantity($item['id'], $item['quantity'], $newTotal);
                     }
                 }
             }
-
-            foreach ($originalItems as $originalItem) {
-                if (!isset($finalItemsMap[$originalItem['item_id']])) {
-                    $this->paymentDAL->deleteSessionUsedItem($originalItem['item_id']);
-                }
-            }
-
-            // 2. LẶP QUA TỪNG CA ĐÁ VÀ GỌI PROCEDURE SQL ĐỂ TRỪ KHO VÀ CHỐT THANH TOÁN
-            $sessions = $originalInvoice['rental_sessions'];
-            foreach ($sessions as $session) {
-                // Đảm bảo chỉ thanh toán các ca chưa trả tiền
-                if (isset($session['payment_status']) && $session['payment_status'] === 'unpaid') {
-                    $this->paymentDAL->callThanhToanProcedure($session['session_id']);
-                }
-            }
-
-            // 3. ĐÁNH DẤU HỢP ĐỒNG TỔNG (BOOKING) LÀ ĐÃ HOÀN TẤT
-            $this->paymentDAL->completeBooking($bookingId);
-
-            $this->db->commit();
-            return ["status" => "success", "message" => "Thanh toán thành công! Kho đã được trừ tự động."];
-
-        } catch (Exception $e) {
-            $this->db->rollBack();
-            return ["status" => "error", "message" => "Lỗi hệ thống khi xác nhận thanh toán: " . $e->getMessage()];
         }
+
+        foreach ($originalItems as $originalItem) {
+            if (!isset($finalItemsMap[$originalItem['item_id']])) {
+                $this->paymentDAL->deleteSessionUsedItem($originalItem['item_id']);
+            }
+        }
+
+        // 2. LẶP QUA TỪNG CA ĐÁ ĐỂ TRỪ KHO (Giữ nguyên logic của bạn)
+        $sessions = $originalInvoice['rental_sessions'];
+        foreach ($sessions as $session) {
+            if (isset($session['payment_status']) && $session['payment_status'] === 'unpaid') {
+                $this->paymentDAL->callThanhToanProcedure($session['session_id']);
+            }
+        }
+
+        // 3. ĐÁNH DẤU BOOKING LÀ ĐÃ THANH TOÁN VÀ LƯU TỔNG TIỀN
+        // Truyền thêm biến $grandTotal vào đây
+        $this->paymentDAL->completeBooking($bookingId, $grandTotal);
+
+        $this->db->commit();
+        return ["status" => "success", "message" => "Thanh toán thành công!"];
+
+    } catch (Exception $e) {
+        $this->db->rollBack();
+        return ["status" => "error", "message" => "Lỗi: " . $e->getMessage()];
     }
+}
 
     public function searchCustomers($keyword) {
         return $this->customerDAL->searchByNameOrPhone($keyword);

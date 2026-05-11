@@ -20,28 +20,25 @@ class BookingBLL {
     }
 
     public function createNewBooking($data) {
-    try {
-        // Procedure DatSan trong SQL đã tự động bao bọc Transaction 
-        // và xử lý logic tạo khách hàng, tạo booking, tạo ca thuê.
-        // BLL giờ chỉ cần gọi đúng 1 hàm từ DAL:
-        
-        $this->bookingDAL->callDatSanProcedure(
-            $data['user_id'],
-            $data['customer_name'],
-            $data['customer_phone'],
-            $data['court_id'],
-            $data['time_slot'],
-            $data['price_per_session'], // Đây chính là p_amount trong SQL
-            $data['deposit']
-        );
+        try {
+            // Truyền đầy đủ các trường dữ liệu từ Payload frontend gửi lên
+            $this->bookingDAL->callDatSanProcedure(
+                $data['user_id'],
+                $data['customer_name'],
+                $data['customer_phone'],
+                $data['court_id'],
+                $data['time_slot'],
+                $data['price_per_session'],
+                $data['deposit'],
+                $data['start_date'], // Trường mới
+                $data['end_date']    // Trường mới
+            );
 
-        return ["status" => "success", "message" => "Đặt sân thành công!"];
-
-    } catch (Exception $e) {
-        // Bắt lỗi từ Procedure trả ra (ví dụ: "Sân ... đã có người đặt")
-        return ["status" => "error", "message" => "Lỗi đặt sân: " . $e->getMessage()];
+            return ["status" => "success", "message" => "Đặt sân thành công!"];
+        } catch (Exception $e) {
+            return ["status" => "error", "message" => "Lỗi đặt sân: " . $e->getMessage()];
+        }
     }
-}
     public function getCustomerBookings($customerId) {
         return $this->bookingDAL->getBookingsByCustomer($customerId);
     }

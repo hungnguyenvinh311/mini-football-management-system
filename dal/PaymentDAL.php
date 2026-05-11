@@ -78,11 +78,16 @@ class PaymentDAL {
         }
     }
 
-    // Cập nhật trạng thái của Booking tổng thành 'completed'
+    // Cập nhật trạng thái của Booking tổng thành 'paid' để Dashboard thống kê được
     public function completeBooking($bookingId) {
-        $query = "UPDATE bookings SET status = 'completed' WHERE id = :id";
-        $stmt = $this->conn->prepare($query);
-        return $stmt->execute(['id' => $bookingId]);
+       $query = "UPDATE bookings SET status = 'paid', total_amount = :total WHERE id = :id";
+    $stmt = $this->conn->prepare($query);
+    
+    // Truyền thêm giá trị tiền vào đây
+    return $stmt->execute([
+        'total' => $finalTotal, 
+        'id' => $bookingId
+    ]);
     }
 } // <--- Dấu ngoặc đóng class quan trọng mà bạn bị thiếu
 ?>

@@ -138,7 +138,7 @@ BEGIN
 	    GROUP BY product_id
 	) AS sub
 	WHERE p.id = sub.product_id;
-    COMMIT; 
+   
     RAISE NOTICE 'Giao dịch thành công.';
 END;
 $$;
