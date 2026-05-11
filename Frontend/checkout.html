@@ -342,20 +342,25 @@
                 const response = await fetch(`${API_URL}?action=get_customer_unpaid_bookings&customer_id=${customerId}`);
                 const result = await response.json();
 
+                // Tìm đến hàm selectCustomer trong checkout.html
+                // Thay đổi đoạn render HTML ở biến bookingList.innerHTML
+
                 if (result.status === 'success' && result.data.length > 0) {
                     bookingList.innerHTML = result.data.map(booking => `
-                    <tr>
-                        <td><strong>#BK-${booking.booking_id}</strong></td>
-                        <td>(Nhiều sân)</td>
-                        <td>${new Date(booking.start_date).toLocaleDateString()} - ${new Date(booking.end_date).toLocaleDateString()}</td>
-                        <td><span class="badge bg-danger">${booking.status}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-success" onclick="openInvoice(${booking.booking_id})">
-                                <i class="fas fa-money-bill-wave"></i> Thanh toán
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
+    <tr>
+        <td><strong>#BK-${booking.booking_id}</strong></td>
+        
+        <td>${booking.booked_courts || 'Chưa xác định'}</td>
+        
+        <td>${new Date(booking.start_date).toLocaleDateString()} - ${new Date(booking.end_date).toLocaleDateString()}</td>
+        <td><span class="badge bg-danger">${booking.status}</span></td>
+        <td>
+            <button class="btn btn-sm btn-success" onclick="openInvoice(${booking.booking_id})">
+                <i class="fas fa-money-bill-wave"></i> Thanh toán
+            </button>
+        </td>
+    </tr>
+`).join('');
                 } else {
                     bookingList.innerHTML = '<tr><td colspan="5">Khách hàng này không có phiếu đặt nào chưa thanh toán.</td></tr>';
                 }
@@ -436,7 +441,7 @@
             itemsBody.innerHTML = used_items.map(item => {
                 const sessionData = rental_sessions.find(s => s.session_id === item.session_id);
                 const sessionDate = sessionData ? new Date(sessionData.play_date).toLocaleDateString() : 'N/A';
-                
+
                 return `
              <tr data-item-id="${item.item_id}" data-product-id="${item.product_id}">
                 <td>${item.product_code || ''}</td>

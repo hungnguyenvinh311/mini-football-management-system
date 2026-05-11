@@ -80,7 +80,8 @@ CREATE TABLE session_used_items (
 -- 8a. VIEW và PROCEDURE hỗ trợ Module Update Session và Payment
 
 -- View danh sách booking chưa thanh toán (dùng cho Module Payment)
-CREATE VIEW vw_unpaid_bookings AS
+-- Chạy đoạn này để cập nhật View lấy thêm tên sân
+CREATE OR REPLACE VIEW vw_unpaid_bookings AS
 SELECT b.id AS booking_id,
        b.customer_id,
        c.name AS customer_name,
@@ -89,7 +90,12 @@ SELECT b.id AS booking_id,
        b.end_date,
        b.total_expected_amount,
        b.deposit_amount,
-       b.status
+       b.status,
+       -- Đoạn này để lôi tên các sân ra nè
+       (SELECT STRING_AGG(cr.name, ', ') 
+        FROM booking_courts bc 
+        JOIN courts cr ON bc.court_id = cr.id 
+        WHERE bc.booking_id = b.id) AS booked_courts
 FROM bookings b
 JOIN customers c ON c.id = b.customer_id
 WHERE b.status != 'paid';
