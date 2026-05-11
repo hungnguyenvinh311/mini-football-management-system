@@ -5,50 +5,64 @@ CREATE OR REPLACE PROCEDURE DatSan(
     p_phone TEXT,
     p_court_id INT,
     p_timeslot TEXT,
-    p_amount NUMERIC,
-    p_deposit NUMERIC
+    p_total_amount NUMERIC, 
+    p_unit_price NUMERIC,   
+    p_deposit NUMERIC,
+    p_start_date DATE,
+    p_end_date DATE,
+    OUT p_booking_id INT
 )
 LANGUAGE plpgsql
 AS $$
 DECLARE
     v_customer_id INT;
-    v_booking_id INT;
     v_booking_court_id INT;
+    v_check_date DATE;
 BEGIN
-    PERFORM 1 FROM rental_sessions rs
-    JOIN booking_courts bc ON rs.booking_court_id = bc.id
-    WHERE bc.court_id = p_court_id 
-      AND rs.play_date = CURRENT_DATE 
-      AND bc.time_slot = p_timeslot;
 
-    IF FOUND THEN
-        RAISE EXCEPTION 'Sân % đã có người đặt vào khung giờ %!', p_court_id, p_timeslot;
-    END IF;
-    SELECT id INTO v_customer_id FROM customers WHERE phone = p_phone LIMIT 1;
+    v_check_date := p_start_date;
+    WHILE v_check_date <= p_end_date LOOP
+        IF EXISTS (
+            SELECT 1 FROM rental_sessions rs
+            JOIN booking_courts bc ON rs.booking_court_id = bc.id
+            WHERE bc.court_id = p_court_id 
+              AND bc.time_slot = p_timeslot
+              AND rs.play_date = v_check_date
+        ) THEN
+            RAISE EXCEPTION 'Sân % đã có người đặt vào ngày % khung giờ %!', p_court_id, v_check_date, p_timeslot;
+        END IF;
+        v_check_date := v_check_date + INTERVAL '7 days';
+    END LOOP;
 
+    SELECT id INTO v_customer_id FROM customers WHERE phone = p_phone FOR UPDATE; 
     IF v_customer_id IS NULL THEN
-        INSERT INTO customers (name, phone) VALUES (p_name, p_phone)
+        INSERT INTO customers (name, phone) VALUES (p_name, p_phone) 
         RETURNING id INTO v_customer_id;
     END IF;
+
     INSERT INTO bookings (customer_id, user_id, start_date, end_date, total_expected_amount, deposit_amount, status)
-    VALUES (v_customer_id, p_user_id, CURRENT_DATE, CURRENT_DATE, p_amount, p_deposit, 'active')
-    RETURNING id INTO v_booking_id;
+    VALUES (v_customer_id, p_user_id, p_start_date, p_end_date, p_total_amount, p_deposit, 'active')
+    RETURNING id INTO p_booking_id;
 
     INSERT INTO booking_courts (booking_id, court_id, time_slot, price_per_session)
-    VALUES (v_booking_id, p_court_id, p_timeslot, p_amount)
+    VALUES (p_booking_id, p_court_id, p_timeslot, p_unit_price)
     RETURNING id INTO v_booking_court_id;
 
-    INSERT INTO rental_sessions (booking_court_id, play_date, payment_status)
-    VALUES (v_booking_court_id, CURRENT_DATE, 'unpaid');
+    v_check_date := p_start_date;
+    WHILE v_check_date <= p_end_date LOOP
+        INSERT INTO rental_sessions (booking_court_id, play_date, rent_amount, payment_status)
+        VALUES (v_booking_court_id, v_check_date, p_unit_price, 'unpaid');
+        
+        v_check_date := (v_check_date + INTERVAL '7 days')::date;
+    END LOOP;
 
-    RAISE NOTICE 'Đặt sân thành công cho khách hàng % tại sân %!', p_name, p_court_id;
+    RAISE NOTICE 'Đặt sân thành công cho khách hàng %!', p_name;
 
 EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION 'Giao dịch thất bại! Chi tiết: %', SQLERRM;
 END;
 $$;
-;
 
 --View Chi Tiết Phiếu
 select * from vw_booking_slip_details

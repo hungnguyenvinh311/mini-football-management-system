@@ -6,17 +6,15 @@ class BookingDAL {
 
     public function callDatSanProcedure($userId, $name, $phone, $courtId, $timeSlot, $totalAmount, $unitPrice, $deposit, $startDate, $endDate) {
     try {
-        // Có 11 dấu chấm hỏi (10 IN + 1 OUT)
         $query = "CALL DatSan(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($query);
         
         $stmt->execute([
             $userId, $name, $phone, $courtId, $timeSlot, 
             $totalAmount, $unitPrice, $deposit, $startDate, $endDate,
-            null // Vị trí của biến OUT
+            null
         ]);
 
-        // Lấy giá trị ID trả về từ Procedure
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result ? $result['p_booking_id'] : false;
     } catch (PDOException $e) {
